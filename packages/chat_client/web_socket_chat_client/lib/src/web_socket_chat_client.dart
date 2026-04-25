@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:chat_client/chat_client.dart';
+import 'package:meta/meta.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 /// Type definition that opens a [WebSocketChannel] for a given [Uri].
@@ -12,14 +13,15 @@ typedef WebSocketChannelFactory = WebSocketChannel Function(Uri uri);
 ///
 /// The [WebSocketChatClient.new] constructor requires the [Uri] of the
 /// WebSocket endpoint — the value is provided at the composition root
-/// (typically from a `--dart-define-from-file` env file). A custom
-/// [WebSocketChannelFactory] can be injected to substitute the transport
-/// in tests.
+/// (typically from a `--dart-define-from-file` env file). The
+/// [WebSocketChannelFactory] parameter is `@visibleForTesting` and exists
+/// so tests can substitute the transport.
 /// {@endtemplate}
 class WebSocketChatClient implements ChatClient {
   /// {@macro web_socket_chat_client}
   WebSocketChatClient({
     required Uri endpoint,
+    @visibleForTesting
     WebSocketChannelFactory channelFactory = WebSocketChannel.connect,
   }) : _endpoint = endpoint,
        _channelFactory = channelFactory;
@@ -53,8 +55,6 @@ class WebSocketChatClient implements ChatClient {
         onDone: _handleDone,
       );
       _events.add(const ChatConnected());
-    } on ChatClientException {
-      rethrow;
     } catch (error, stackTrace) {
       Error.throwWithStackTrace(ConnectException(error), stackTrace);
     }
@@ -71,8 +71,6 @@ class WebSocketChatClient implements ChatClient {
       await subscription?.cancel();
       await channel.sink.close();
       _events.add(const ChatDisconnected());
-    } on ChatClientException {
-      rethrow;
     } catch (error, stackTrace) {
       Error.throwWithStackTrace(DisconnectException(error), stackTrace);
     }

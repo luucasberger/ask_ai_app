@@ -39,6 +39,10 @@ Interaction model across both conversations and folders: **long-press → floati
 - **Testing:** `flutter_test`, `bloc_test`, `mocktail`. The project maintains **100% coverage** — every new line of production code must be covered by a test, and coverage must not regress.
 - **Always use `very_good_cli`** in place of raw `flutter`/`dart` equivalents whenever an equivalent exists (tests, coverage, project creation, recursive `pub get`, license checks). Invoke the **`very-good-cli` skill** for these operations rather than handcrafting the commands.
 
+### Widget Test Pump Helper: `pumpApp`
+
+Widget tests **must never call `tester.pumpWidget` directly** when a `pumpApp` extension exists for that test directory (see `test/helpers/pump_app.dart`). Always go through `pumpApp` so the widget renders under the same `MaterialApp` configuration the production app uses (theme, localization delegates, supported locales). New shared scaffolding (`BlocProvider`s, repositories, etc.) belongs in `pumpApp` so every test picks it up automatically rather than re-implementing the wiring per-test.
+
 ### Test-Only Lint Exception: `const`
 
 `test/analysis_options.yaml` disables `prefer_const_constructors` on purpose. Reason: `const` widget instances in tests can cause flaky tests (widget identity reuse across pumps, cached references, etc.), and the same canonicalization can cause confusing `same()` / identity surprises with value types. Rule of thumb:
@@ -52,7 +56,7 @@ Use square-bracket dartdoc references (`[ClassName]`, `[ClassName.member]`) when
 
 ### Error Handling Convention (Client Implementations)
 
-Concrete `*_client` implementations follow the lasubo `firebase_auth_client` pattern: every public method is wrapped in a `try` block. Specific exceptions are mapped on `on TypeException` clauses; the broad `catch (error, stackTrace)` clause uses `Error.throwWithStackTrace(DomainException(error), stackTrace)` to preserve the original stack trace while exposing a domain-typed exception. Add `on ChatClientException { rethrow; }` at the top of the catch chain so domain exceptions thrown by pre-checks (e.g. `MessageTooLargeException`) propagate without being re-wrapped.
+Concrete `*_client` implementations follow the lasubo `firebase_auth_client` pattern: every public method is wrapped in a `try` block. Specific exceptions are mapped on `on TypeException` clauses; the broad `catch (error, stackTrace)` clause uses `Error.throwWithStackTrace(DomainException(error), stackTrace)` to preserve the original stack trace while exposing a domain-typed exception. When a method has **pre-check validations that throw `ChatClientException` subtypes inside the `try` block** (e.g. `MessageTooLargeException`, an explicit "not connected" `SendException`), add `on ChatClientException { rethrow; }` at the top of the catch chain so those domain exceptions propagate without being re-wrapped by the broad catch. Methods whose `try` block cannot throw a `ChatClientException` (e.g. `connect`, `disconnect` — only the transport runs inside) should omit the `on ChatClientException { rethrow; }` clause; it would be redundant.
 
 ### Environment Configuration
 
