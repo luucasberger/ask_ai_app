@@ -32,7 +32,51 @@ $ flutter run --flavor staging --target lib/main_staging.dart
 $ flutter run --flavor production --target lib/main_production.dart
 ```
 
-_\*Ask Ai App works on iOS, Android, Web, and Windows._
+_\*Ask Ai App works on iOS and Android._
+
+---
+
+## Bonus Features ✨
+
+The challenge allows up to three additional features on top of the required real-time chat and conversation history. Below are the three we shipped, with rationale and tradeoffs.
+
+> **Navigation pattern:** the conversation list (and folders, once they ship) lives inside a left-edge navigation drawer, mirroring the ChatGPT and Claude mobile apps. The active chat is the main screen, and the drawer slides in to show history. All conversation- and folder-level interactions described below happen inside that drawer.
+
+### 1. Typewriter streaming + in-progress send button
+
+When an assistant response arrives over the WebSocket, it is revealed character-by-character rather than appearing all at once. The stream always plays out in full — there is no fast-forward or skip interaction. While a response is in flight, the composer's send button is replaced by an animated in-progress indicator that persists until the stream completes.
+
+**Rationale.** A typewriter reveal and an in-progress affordance are de facto standards for AI chat (ChatGPT, Claude, Gemini). They sell the "AI is thinking" illusion and soften the otherwise-jarring instant echo. Replacing the send button with the indicator avoids spending a separate bonus slot on a dedicated typing-indicator bubble.
+
+**Tradeoffs.**
+
+- Token-by-token streaming would more faithfully mimic a real LLM, but the WebSocket echo returns the full message in a single frame — per-character animation is as close as we can get without faking server behavior.
+- A standalone "three dots" typing-indicator bubble (à la iMessage) is more conventional, but it would have consumed a full bonus slot for marginal benefit over the in-line button animation.
+
+### 2. Rename and delete conversations
+
+Long-pressing a conversation row inside the drawer opens a floating context menu anchored to the row, with **Rename**, **Move to folder…**, and **Delete**. Conversations are auto-titled from the first user message and can be renamed at any time. Deletion requires an explicit confirmation dialog.
+
+**Rationale.** Once history grows beyond a handful of chats, the inability to rename or delete them becomes immediately painful. This is the most-felt absence in any chat app with persistent history.
+
+**Tradeoffs.**
+
+- **Long-press vs swipe gestures.** Swipe is more efficient (one motion, no menu), but it requires per-row dismissible widgets, undo affordances, and more test surface. A long-press context menu reuses a single component for both conversations and folders, is a familiar mobile pattern (iMessage, WhatsApp, Notes), and is simpler to test. We accepted slightly worse efficiency for materially simpler code.
+- **Floating context menu vs modal bottom sheet.** A bottom sheet sliding up from the bottom of the screen is a common Material pattern, but it visually disconnects the menu from the row the user pressed. A small floating panel anchored to the long-pressed row keeps the action options visually tethered to their target — the user never loses sight of *what* they're acting on. This matches the iOS-native context menu pattern. The "Move to folder…" sub-action cascades from the same context menu rather than switching to a bottom sheet, so the entire long-press flow stays in one consistent visual register.
+- **No undo / trash bin.** A confirmation dialog is sufficient given the low blast radius of a single conversation; a trash bin would have added meaningful state and UI for a demo-scale app.
+
+### 3. Folders, folder CRUD, and conversation move
+
+Inside the drawer, content becomes a two-level view: user-created folders ("Books", "Lifestyle", …) on top, with an "Uncategorized" bucket below for conversations that haven't been filed. A `+` action in the drawer creates a new folder. Long-pressing a folder opens a floating context menu anchored to the row, with **Rename** and **Delete**. The conversation long-press menu includes **Move to folder…**, which cascades into a floating sub-menu listing folders, "Uncategorized", and "New folder…".
+
+We treat folders, folder CRUD, and conversation move as a single cohesive bonus feature: without folder rename and delete, folders would be unmanageable; without "move", they would be useless.
+
+**Rationale.** Conversation history scales poorly without organization. A flat list of dozens of chats forces the user to scan every time. Folders are the simplest organizational primitive that makes history usable at scale.
+
+**Tradeoffs.**
+
+- **Folder nesting was rejected.** Nesting adds breadcrumbs, recursive UI, harder data modelling, and trickier delete semantics. A flat hierarchy is enough for a chat app of this scope.
+- **Cascade delete vs auto-move to Uncategorized.** Deleting a folder permanently deletes every conversation inside it, rather than moving them to Uncategorized. This is more destructive but produces a cleaner mental model — "delete folder" really means delete. We mitigate the risk with a confirmation dialog that names the conversation count, e.g. *"Delete 'Books'? This will permanently delete 12 conversations."*
 
 ---
 
