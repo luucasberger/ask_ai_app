@@ -39,22 +39,36 @@ Interaction model across both conversations and folders: **long-press → floati
 - **Testing:** `flutter_test`, `bloc_test`, `mocktail`. The project maintains **100% coverage** — every new line of production code must be covered by a test, and coverage must not regress.
 - **Always use `very_good_cli`** in place of raw `flutter`/`dart` equivalents whenever an equivalent exists (tests, coverage, project creation, recursive `pub get`, license checks). Invoke the **`very-good-cli` skill** for these operations rather than handcrafting the commands.
 
-### Test-Only Lint Exception: `const` on Widgets
+### Test-Only Lint Exception: `const`
 
-`test/analysis_options.yaml` disables `prefer_const_constructors` on purpose. Reason: `const` widget instances in tests can cause flaky tests (widget identity reuse across pumps, cached references, etc.). Rule of thumb:
+`test/analysis_options.yaml` disables `prefer_const_constructors` on purpose. Reason: `const` widget instances in tests can cause flaky tests (widget identity reuse across pumps, cached references, etc.), and the same canonicalization can cause confusing `same()` / identity surprises with value types. Rule of thumb:
 
-- **Never** add `const` to widget constructors inside test files, even when the analyzer would normally prompt for it — that prompt is silenced for exactly this reason.
-- **Do** add `const` when the analyzer still fires the lint (e.g. on a literal like `<String>['a', 'b']`), since those cases aren't widget-identity hazards.
+- **Never** add `const` inside test files, even when the analyzer would normally prompt for it — the prompt is silenced for exactly this reason.
+- **Do** add `const` only when the analyzer still fires a lint or compile error (e.g. when a value must be const for the call site to type-check). Run `fvm dart analyze` to confirm.
+
+### Doc Reference Convention
+
+Use square-bracket dartdoc references (`[ClassName]`, `[ClassName.member]`) when documenting public APIs in any package — never plain backticks for type names. If the type isn't already in scope, import the package barrel (`package:chat_client/chat_client.dart`) so the reference resolves.
+
+### Error Handling Convention (Client Implementations)
+
+Concrete `*_client` implementations follow the lasubo `firebase_auth_client` pattern: every public method is wrapped in a `try` block. Specific exceptions are mapped on `on TypeException` clauses; the broad `catch (error, stackTrace)` clause uses `Error.throwWithStackTrace(DomainException(error), stackTrace)` to preserve the original stack trace while exposing a domain-typed exception. Add `on ChatClientException { rethrow; }` at the top of the catch chain so domain exceptions thrown by pre-checks (e.g. `MessageTooLargeException`) propagate without being re-wrapped.
+
+### Environment Configuration
+
+Each flavor reads compile-time constants from a matching JSON env file at the project root: `env-dev.json` (development), `env-stg.json` (staging), `env-prod.json` (production). Values are accessed via `String.fromEnvironment('KEY')` (typically inside `main_*.dart`) and supplied at build/run time with `--dart-define-from-file=env-<dev|stg|prod>.json`. The current key set:
+
+- `WS_ENDPOINT` — WebSocket URL passed to `WebSocketChatClient` (primary `wss://echo.websocket.org`, backup `wss://echo-websocket.fly.dev`).
 
 ## Common Commands
 
 Run via fvm so the pinned Flutter SDK is used:
 
 ```sh
-# Run the app (three flavors, each with its own entrypoint)
-fvm flutter run --flavor development --target lib/main_development.dart
-fvm flutter run --flavor staging     --target lib/main_staging.dart
-fvm flutter run --flavor production  --target lib/main_production.dart
+# Run the app (three flavors, each with its own entrypoint + env file)
+fvm flutter run --flavor development --target lib/main/main_development.dart --dart-define-from-file=env-dev.json
+fvm flutter run --flavor staging     --target lib/main/main_staging.dart     --dart-define-from-file=env-stg.json
+fvm flutter run --flavor production  --target lib/main/main_production.dart  --dart-define-from-file=env-prod.json
 
 # All tests with coverage + random ordering (enforce 100% coverage)
 very_good test --coverage --min-coverage 100 --test-randomize-ordering-seed random
@@ -76,7 +90,7 @@ fvm flutter gen-l10n --arb-dir="lib/l10n/arb"
 
 ## Architecture Notes
 
-- Three flavor entrypoints (`lib/main_{development,staging,production}.dart`) all delegate to `bootstrap()` in `lib/bootstrap.dart`, which wires up `Bloc.observer` and `FlutterError.onError` before running `App`. Put cross-flavor setup inside `bootstrap`, not inside individual `main_*.dart` files.
+- Three flavor entrypoints (`lib/main/main_{development,staging,production}.dart`) all delegate to `bootstrap()` in `lib/main/bootstrap/bootstrap.dart`, which wires up `Bloc.observer` and `FlutterError.onError` before running `App`. Compile-time env values from `env-<flavor>.json` are exposed via `Environment` in `lib/main/bootstrap/environment.dart`. Put cross-flavor setup inside `bootstrap`, not inside individual `main_*.dart` files.
 - **Conversation history lives in a left-edge navigation drawer** — same pattern as the ChatGPT and Claude mobile apps. The active chat is the main screen; swiping from the left edge or tapping a menu button slides the drawer in. The "new conversation" action lives inside the drawer header. When folders ship (bonus feature), they occupy the top of the same drawer with the conversation list below them.
 - `lib/counter/` is **placeholder scaffolding** from Very Good CLI. It is a reference for feature-folder layout (`feature/cubit` + `feature/view` + barrel file) and should be removed or replaced as real AskAI features land.
 - Follow the same feature-folder pattern for new features: `lib/<feature>/{bloc|cubit,view,widgets}` with a barrel `lib/<feature>/<feature>.dart` that re-exports the public surface.
