@@ -2,7 +2,7 @@ import 'package:app_ui/app_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  group('AppSpacing', () {
+  group(AppSpacing, () {
     const spacing = AppSpacing();
 
     test('has correct default values', () {
@@ -37,12 +37,12 @@ void main() {
       expect(copy.xxlg, spacing.xxlg);
     });
 
-    test('lerp returns this when other is not AppSpacing', () {
+    test('lerp returns this when other is not $AppSpacing', () {
       final result = spacing.lerp(null, 0.5);
       expect(result, spacing);
     });
 
-    test('lerp interpolates between two AppSpacing instances', () {
+    test('lerp interpolates between two $AppSpacing instances', () {
       const other = AppSpacing(
         xxs: 8,
         xs: 16,

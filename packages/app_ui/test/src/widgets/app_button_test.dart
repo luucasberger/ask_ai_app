@@ -7,7 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import '../../helpers/helpers.dart';
 
 void main() {
-  group('AppButton', () {
+  group(AppButton, () {
     testWidgets('renders child', (tester) async {
       await tester.pumpApp(AppButton(onPressed: () {}, child: Text('Tap me')));
 
@@ -30,13 +30,13 @@ void main() {
       await tester.tap(find.byType(AppButton));
     });
 
-    testWidgets('renders FilledButton for primary variant', (tester) async {
+    testWidgets('renders $FilledButton for primary variant', (tester) async {
       await tester.pumpApp(AppButton(onPressed: () {}, child: Text('Primary')));
 
       expect(find.byType(FilledButton), findsOneWidget);
     });
 
-    testWidgets('renders FilledButton.tonal for secondary variant', (
+    testWidgets('renders $FilledButton.tonal for secondary variant', (
       tester,
     ) async {
       await tester.pumpApp(
@@ -50,7 +50,7 @@ void main() {
       expect(find.byType(FilledButton), findsOneWidget);
     });
 
-    testWidgets('renders OutlinedButton for outline variant', (tester) async {
+    testWidgets('renders $OutlinedButton for outline variant', (tester) async {
       await tester.pumpApp(
         AppButton(
           onPressed: () {},
