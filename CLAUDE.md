@@ -99,3 +99,20 @@ fvm flutter gen-l10n --arb-dir="lib/l10n/arb"
 - `lib/counter/` is **placeholder scaffolding** from Very Good CLI. It is a reference for feature-folder layout (`feature/cubit` + `feature/view` + barrel file) and should be removed or replaced as real AskAI features land.
 - Follow the same feature-folder pattern for new features: `lib/<feature>/{bloc|cubit,view,widgets}` with a barrel `lib/<feature>/<feature>.dart` that re-exports the public surface.
 - Tests mirror `lib/` under `test/`. Shared widget-test helpers (pump helpers, mock setup) live in `test/helpers/`.
+
+### Packages
+
+The workspace splits domain code into local packages under `packages/`. Each is its own pub package with its own tests and 100% coverage threshold.
+
+| Package | Purpose |
+| --- | --- |
+| `packages/app_ui` | Design system: spacing, radii, typography, theme tokens, and **reusable cross-feature widgets**. Re-exports `flutter/material.dart` so consumers import a single barrel (`package:app_ui/app_ui.dart`). |
+| `packages/chat_client/chat_client` | Transport-agnostic `[ChatClient]` interface, domain models, and the `[ChatClientException]` hierarchy. Has no transport dependency — pure contract. |
+| `packages/chat_client/web_socket_chat_client` | WebSocket-backed `[ChatClient]` implementation. Wraps `web_socket_channel` and maps transport errors onto the `[ChatClientException]` hierarchy per the error-handling convention above. |
+| `packages/chat_repository` | Bridges a `[ChatClient]` to feature blocs/cubits. App-layer code (blocs, cubits, views) depends on this — never on a `*_client` package directly. |
+
+#### Where a new widget belongs
+
+1. **Reusable across features** (e.g. an `AppButton` variant, a generic empty-state, a chat bubble shared by multiple screens) → add it to `packages/app_ui` and export it from `app_ui.dart`. Any feature can then pull it via `package:app_ui/app_ui.dart`.
+2. **Used only inside one feature** → create `lib/<feature>/widgets/` and put the widget there, exporting through the feature barrel.
+3. **Trivial and single-use inside the view** → inline it in the view file (e.g. `lib/<feature>/view/<feature>_page.dart`) rather than spinning up a `widgets/` directory for one private widget.
