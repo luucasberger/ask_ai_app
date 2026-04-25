@@ -1,0 +1,17 @@
+name: web_socket_chat_client
+description: WebSocket-backed implementation of ChatClient for AskAI.
+version: 0.1.0+1
+publish_to: none
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  chat_client:
+    path: ../chat_client
+  web_socket_channel: ^3.0.3
+
+dev_dependencies:
+  mocktail: ^1.0.5
+  test: ^1.31.0
+  very_good_analysis: ^10.2.0

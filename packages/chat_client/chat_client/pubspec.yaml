@@ -1,0 +1,15 @@
+name: chat_client
+description: Interface for AskAI chat clients (transport-agnostic).
+version: 0.1.0+1
+publish_to: none
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  equatable: ^2.0.7
+
+dev_dependencies:
+  mocktail: ^1.0.5
+  test: ^1.31.0
+  very_good_analysis: ^10.2.0
