@@ -1,5 +1,5 @@
-import 'package:flutter/widgets.dart';
 import 'package:ask_ai_app/l10n/gen/app_localizations.dart';
+import 'package:flutter/widgets.dart';
 
 export 'package:ask_ai_app/l10n/gen/app_localizations.dart';
 
