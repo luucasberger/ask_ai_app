@@ -11,12 +11,18 @@ dependencies:
   app_ui:
     path: packages/app_ui
   bloc: ^9.2.0
+  chat_client:
+    path: packages/chat_client/chat_client
+  chat_repository:
+    path: packages/chat_repository
   flutter:
     sdk: flutter
   flutter_bloc: ^9.1.1
   flutter_localizations:
     sdk: flutter
   intl: ^0.20.2
+  web_socket_chat_client:
+    path: packages/chat_client/web_socket_chat_client
 
 dev_dependencies:
   bloc_lint: ^0.4.1
