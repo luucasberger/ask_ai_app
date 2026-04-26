@@ -29,6 +29,16 @@ Three bonus features ship on top of the required ones, after the required featur
 
 Interaction model across both conversations and folders: **long-press → floating context menu** (anchored to the long-pressed row, not a modal bottom sheet). No swipe gestures. Implement with `showMenu` / `MenuAnchor` on Material and `CupertinoContextMenu` on iOS — pick whichever single cross-platform abstraction reads cleanest in this codebase.
 
+### Implementation Status
+
+| Feature | Status | Code / Notes |
+| --- | --- | --- |
+| Required #1 — Real-time chat | Done | `lib/chat/`, `packages/chat_client/{chat_client,web_socket_chat_client}`, `packages/chat_repository` |
+| Required #2 — Conversation history | Not started | Needs a conversation list, a persistence layer, and the left-edge drawer UI |
+| Bonus #1 — Typewriter streaming + in-flight send button | Done | `lib/chat/widgets/{chat_composer,typewriter_text,chat_bubble}.dart`; coordinated via `ChatState.streamingMessageId` + `ChatStreamingCompleted` |
+| Bonus #2 — Rename / delete conversations | Not started | Depends on Required #2 |
+| Bonus #3 — Folders + folder CRUD + move | Not started | Depends on Required #2 |
+
 ## Tech Stack & Constraints
 
 - **Flutter version is pinned via fvm** (`.fvmrc` → 3.41.7). Prefix Flutter/Dart commands with `fvm` so the pinned SDK is used.
@@ -102,9 +112,18 @@ fvm flutter gen-l10n --arb-dir="lib/l10n/arb"
 
 - Three flavor entrypoints (`lib/main/main_{development,staging,production}.dart`) all delegate to `bootstrap()` in `lib/main/bootstrap/bootstrap.dart`, which wires up `Bloc.observer` and `FlutterError.onError` before running `App`. Compile-time env values from `env-<flavor>.json` are exposed via `Environment` in `lib/main/bootstrap/environment.dart`. Put cross-flavor setup inside `bootstrap`, not inside individual `main_*.dart` files.
 - **Conversation history lives in a left-edge navigation drawer** — same pattern as the ChatGPT and Claude mobile apps. The active chat is the main screen; swiping from the left edge or tapping a menu button slides the drawer in. The "new conversation" action lives inside the drawer header. When folders ship (bonus feature), they occupy the top of the same drawer with the conversation list below them.
-- `lib/counter/` is **placeholder scaffolding** from Very Good CLI. It is a reference for feature-folder layout (`feature/cubit` + `feature/view` + barrel file) and should be removed or replaced as real AskAI features land.
-- Follow the same feature-folder pattern for new features: `lib/<feature>/{bloc|cubit,view,widgets}` with a barrel `lib/<feature>/<feature>.dart` that re-exports the public surface.
+- `lib/chat/` is the canonical feature-folder layout: `bloc/` + `model/` + `view/` + `widgets/` plus a barrel `chat.dart` that re-exports the public surface. Follow the same pattern for new features (substitute `cubit/` for `bloc/` if a cubit is the better fit).
 - Tests mirror `lib/` under `test/`. Shared widget-test helpers (pump helpers, mock setup) live in `test/helpers/`.
+
+### Chat Feature Internals
+
+The chat feature models a single in-memory conversation today — these are the seams to extend when adding conversation history (Required #2) and the bonus features that build on it.
+
+- **Lifecycle.** `ChatBloc` (`lib/chat/bloc/chat_bloc.dart`) connects on `ChatStarted`, subscribes to `ChatRepository.incomingMessages`, and disconnects in `close()`. Connection failures surface as `ChatStatus.error` + `ChatTransientError.connectionFailed`.
+- **Message store.** `ChatState.messages` is a flat list ordered oldest → newest; `Message` (`lib/chat/model/message.dart`) carries `id`, `role`, `text` only — no `conversationId`, and nothing is persisted across app restarts. Adding multi-conversation history will mean introducing a `Conversation` entity, a persistence layer, and lifting the message list out of the per-bloc memory store.
+- **Streaming hooks.** `ChatState.streamingMessageId` identifies the assistant message currently being revealed by `TypewriterText`; the view fires `ChatStreamingCompleted(id)` from the typewriter's `onCompleted`, which clears the id and flips `canSend` back to true. Persisted text is always the full final string — the typewriter is a view-layer effect.
+- **Send gating.** `ChatState.canSend` is the single source of truth for whether the composer should accept input (false while connecting, while a response is in flight, or while the typewriter is still revealing). Both the send button and the keyboard submit handler in `ChatComposer` re-check it before dispatching.
+- **Transient errors.** `ChatTransientError` values (`connectionFailed`, `sendFailed`, `messageTooLarge`) flow through `ChatState.transientError` and render as snackbars in `ChatView` via `BlocListener`. `WebSocketChatClient.maxMessageBytes` (64 KB) is enforced inside `send()` and mapped to `ChatTransientError.messageTooLarge` rather than thrown out of the bloc.
 
 ### Packages
 
