@@ -1,13 +1,15 @@
 import 'dart:async';
 import 'package:app_ui/app_ui.dart';
 
+const _charDuration = Duration(milliseconds: 30);
+
 /// {@template typewriter_text}
 /// Reveals [text] one character at a time, then invokes [onCompleted].
 ///
-/// The reveal cadence is fixed by [charDuration]; there is no skip
-/// interaction. The widget is single-shot — it animates from the moment
-/// it mounts and never restarts. Use a `ValueKey` tied to the message
-/// identifier so a new run of the conversation creates a fresh state.
+/// The reveal cadence is fixed; there is no skip interaction. The widget
+/// is single-shot — it animates from the moment it mounts and never
+/// restarts. Use a `ValueKey` tied to the message identifier so a new
+/// run of the conversation creates a fresh state.
 /// {@endtemplate}
 class TypewriterText extends StatefulWidget {
   /// {@macro typewriter_text}
@@ -15,7 +17,6 @@ class TypewriterText extends StatefulWidget {
     required this.text,
     required this.onCompleted,
     this.style,
-    this.charDuration = const Duration(milliseconds: 30),
     super.key,
   });
 
@@ -28,9 +29,6 @@ class TypewriterText extends StatefulWidget {
   /// Optional [TextStyle] applied to the rendered [Text].
   final TextStyle? style;
 
-  /// Time between revealing successive characters.
-  final Duration charDuration;
-
   @override
   State<TypewriterText> createState() => _TypewriterTextState();
 }
@@ -42,7 +40,7 @@ class _TypewriterTextState extends State<TypewriterText> {
   @override
   void initState() {
     super.initState();
-    _timer = Timer.periodic(widget.charDuration, _tick);
+    _timer = Timer.periodic(_charDuration, _tick);
   }
 
   void _tick(Timer timer) {

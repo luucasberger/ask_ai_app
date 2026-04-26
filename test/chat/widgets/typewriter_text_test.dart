@@ -10,7 +10,6 @@ void main() {
       await tester.pumpApp(
         TypewriterText(
           text: 'hi',
-          charDuration: Duration(milliseconds: 30),
           onCompleted: () {},
         ),
       );
@@ -29,7 +28,6 @@ void main() {
       await tester.pumpApp(
         TypewriterText(
           text: 'ab',
-          charDuration: Duration(milliseconds: 30),
           onCompleted: () => completedCount++,
         ),
       );
@@ -50,7 +48,6 @@ void main() {
         TypewriterText(
           text: 'x',
           style: TextStyle(color: Color(0xFFFF0000)),
-          charDuration: Duration(milliseconds: 30),
           onCompleted: () {},
         ),
       );
@@ -65,7 +62,6 @@ void main() {
       await tester.pumpApp(
         TypewriterText(
           text: 'hello world',
-          charDuration: Duration(milliseconds: 30),
           onCompleted: () => completedCount++,
         ),
       );

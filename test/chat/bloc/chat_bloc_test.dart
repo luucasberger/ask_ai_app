@@ -33,10 +33,14 @@ void main() {
           (s) => s.status == ChatStatus.ready,
         );
 
-    ChatBloc buildBloc() => ChatBloc(chatRepository: chatRepository);
+    ChatBloc buildBloc() =>
+        ChatBloc(chatRepository: chatRepository)..add(ChatStarted());
 
     test('initial state has status initial and no messages', () {
-      expect(buildBloc().state, ChatState());
+      expect(
+        ChatBloc(chatRepository: chatRepository).state,
+        ChatState(),
+      );
     });
 
     group(ChatStarted, () {
@@ -248,7 +252,7 @@ void main() {
       );
     });
 
-    group('ChatStreamingCompleted', () {
+    group(ChatStreamingCompleted, () {
       blocTest<ChatBloc, ChatState>(
         'clears streamingMessageId when ids match',
         build: buildBloc,
@@ -297,68 +301,12 @@ void main() {
 
     group('close', () {
       test('cancels the incoming subscription and disconnects', () async {
-        final bloc = ChatBloc(chatRepository: chatRepository);
+        final bloc = buildBloc();
         await waitForReady(bloc);
         await bloc.close();
         verify(chatRepository.disconnect).called(1);
       });
     });
 
-    group(ChatState, () {
-      test('canSend is true only when ready and no response in flight', () {
-        expect(ChatState(status: ChatStatus.ready).canSend, isTrue);
-        expect(ChatState(status: ChatStatus.connecting).canSend, isFalse);
-        expect(
-          ChatState(status: ChatStatus.ready, awaitingResponse: true).canSend,
-          isFalse,
-        );
-        expect(
-          ChatState(status: ChatStatus.ready, streamingMessageId: '0').canSend,
-          isFalse,
-        );
-      });
-
-      test('isResponseInFlight reflects awaiting + streaming', () {
-        expect(ChatState().isResponseInFlight, isFalse);
-        expect(ChatState(awaitingResponse: true).isResponseInFlight, isTrue);
-        expect(
-          ChatState(streamingMessageId: '0').isResponseInFlight,
-          isTrue,
-        );
-      });
-
-      test('copyWith honors clear flags', () {
-        final seeded = ChatState(
-          streamingMessageId: '1',
-          transientError: ChatTransientError.sendFailed,
-        );
-        expect(
-          seeded.copyWith(clearStreamingMessageId: true).streamingMessageId,
-          isNull,
-        );
-        expect(
-          seeded.copyWith(clearTransientError: true).transientError,
-          isNull,
-        );
-      });
-    });
-
-    group('events', () {
-      test('expose value equality', () {
-        expect(ChatStarted(), equals(ChatStarted()));
-        expect(
-          ChatMessageSubmitted('a'),
-          equals(ChatMessageSubmitted('a')),
-        );
-        expect(
-          ChatBackendMessageReceived('a'),
-          equals(ChatBackendMessageReceived('a')),
-        );
-        expect(
-          ChatStreamingCompleted('1'),
-          equals(ChatStreamingCompleted('1')),
-        );
-      });
-    });
   });
 }

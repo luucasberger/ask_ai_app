@@ -43,6 +43,12 @@ Interaction model across both conversations and folders: **long-press → floati
 
 Widget tests **must never call `tester.pumpWidget` directly** when a `pumpApp` extension exists for that test directory (see `test/helpers/pump_app.dart`). Always go through `pumpApp` so the widget renders under the same `MaterialApp` configuration the production app uses (theme, localization delegates, supported locales). New shared scaffolding (`BlocProvider`s, repositories, etc.) belongs in `pumpApp` so every test picks it up automatically rather than re-implementing the wiring per-test.
 
+### Test File Conventions
+
+- **Mirror the source tree 1:1.** Every file under `lib/` (or any package's `lib/`) gets exactly one matching `*_test.dart` under `test/`. Do **not** stuff tests for `chat_state.dart` and `chat_event.dart` into `chat_bloc_test.dart` — each gets its own file.
+- **Hoist a `buildBloc` / `buildCubit` / `pumpFoo` helper** at the top of `main()` instead of repeating constructor calls in every test. Reduces noise and makes the system-under-test obvious from one place.
+- **Reference objects in `group` and `test` names.** Use the type literal in `group(MyBloc, () { ... })` and reference symbols inside descriptions with `$MyEvent` interpolation (e.g. `'dispatches $ChatMessageSubmitted on tap'`) rather than raw strings — IDEs can then jump from the test name to the symbol, and renames flow through.
+
 ### Test-Only Lint Exception: `const`
 
 `test/analysis_options.yaml` disables `prefer_const_constructors` on purpose. Reason: `const` widget instances in tests can cause flaky tests (widget identity reuse across pumps, cached references, etc.), and the same canonicalization can cause confusing `same()` / identity surprises with value types. Rule of thumb:
