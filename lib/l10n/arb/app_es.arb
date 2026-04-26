@@ -1,7 +1,39 @@
 {
     "@@locale": "es",
-    "counterAppBarTitle": "Contador",
-    "@counterAppBarTitle": {
-        "description": "Texto mostrado en la AppBar de la página del contador"
+    "chatAppBarTitle": "AskAI",
+    "@chatAppBarTitle": {
+        "description": "Título mostrado en la AppBar de la página de chat"
+    },
+    "chatComposerHint": "Escribe a AskAI…",
+    "@chatComposerHint": {
+        "description": "Texto de marcador de posición dentro del campo del compositor de chat"
+    },
+    "chatComposerSendLabel": "Enviar",
+    "@chatComposerSendLabel": {
+        "description": "Etiqueta de accesibilidad para el botón de enviar del compositor"
+    },
+    "chatComposerSendingLabel": "Enviando",
+    "@chatComposerSendingLabel": {
+        "description": "Etiqueta de accesibilidad mostrada en el compositor mientras hay una respuesta en curso"
+    },
+    "chatEmptyTitle": "Inicia una conversación",
+    "@chatEmptyTitle": {
+        "description": "Título del estado vacío mostrado cuando aún no se han intercambiado mensajes"
+    },
+    "chatEmptyMessage": "Envía un mensaje para comenzar a chatear.",
+    "@chatEmptyMessage": {
+        "description": "Texto del estado vacío mostrado cuando aún no se han intercambiado mensajes"
+    },
+    "chatErrorConnectionFailed": "No se pudo conectar con AskAI. Inténtalo de nuevo.",
+    "@chatErrorConnectionFailed": {
+        "description": "Snackbar mostrado cuando no se puede establecer la conexión del chat"
+    },
+    "chatErrorSendFailed": "No se pudo enviar tu mensaje. Inténtalo de nuevo.",
+    "@chatErrorSendFailed": {
+        "description": "Snackbar mostrado cuando falla el envío de un mensaje"
+    },
+    "chatErrorMessageTooLarge": "El mensaje es demasiado largo.",
+    "@chatErrorMessageTooLarge": {
+        "description": "Snackbar mostrado cuando el usuario intenta enviar un mensaje que excede el límite de tamaño"
     }
 }

@@ -1,7 +1,39 @@
 {
     "@@locale": "en",
-    "counterAppBarTitle": "Counter",
-    "@counterAppBarTitle": {
-        "description": "Text shown in the AppBar of the Counter Page"
+    "chatAppBarTitle": "AskAI",
+    "@chatAppBarTitle": {
+        "description": "Title shown in the AppBar of the chat page"
+    },
+    "chatComposerHint": "Message AskAI…",
+    "@chatComposerHint": {
+        "description": "Placeholder text shown inside the chat composer text field"
+    },
+    "chatComposerSendLabel": "Send",
+    "@chatComposerSendLabel": {
+        "description": "Accessibility label for the composer's send button"
+    },
+    "chatComposerSendingLabel": "Sending",
+    "@chatComposerSendingLabel": {
+        "description": "Accessibility label shown on the composer while a response is in flight"
+    },
+    "chatEmptyTitle": "Start a conversation",
+    "@chatEmptyTitle": {
+        "description": "Title of the empty state shown when no messages have been exchanged yet"
+    },
+    "chatEmptyMessage": "Send a message to begin chatting.",
+    "@chatEmptyMessage": {
+        "description": "Body text of the empty state shown when no messages have been exchanged yet"
+    },
+    "chatErrorConnectionFailed": "Couldn't connect to AskAI. Please try again.",
+    "@chatErrorConnectionFailed": {
+        "description": "Snackbar shown when the chat connection cannot be established"
+    },
+    "chatErrorSendFailed": "Couldn't send your message. Please try again.",
+    "@chatErrorSendFailed": {
+        "description": "Snackbar shown when sending a message fails"
+    },
+    "chatErrorMessageTooLarge": "Message is too long.",
+    "@chatErrorMessageTooLarge": {
+        "description": "Snackbar shown when the user tries to send a message that exceeds the size limit"
     }
 }
