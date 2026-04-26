@@ -90,6 +90,30 @@ void main() {
       },
     );
 
+    testWidgets(
+      'does not dispatch on the keyboard send action while a response '
+      'is in flight and preserves the typed text',
+      (tester) async {
+        when(() => bloc.state).thenReturn(
+          ChatState(
+            status: ChatStatus.ready,
+            awaitingResponse: true,
+          ),
+        );
+
+        await pumpComposer(tester);
+        await tester.enterText(find.byType(TextField), 'queued message');
+        await tester.testTextInput.receiveAction(TextInputAction.send);
+        await tester.pump();
+
+        verifyNever(() => bloc.add(any(that: isA<ChatMessageSubmitted>())));
+        expect(
+          tester.widget<TextField>(find.byType(TextField)).controller!.text,
+          'queued message',
+        );
+      },
+    );
+
     testWidgets('does not dispatch when text is blank', (tester) async {
       when(() => bloc.state).thenReturn(
         ChatState(status: ChatStatus.ready),

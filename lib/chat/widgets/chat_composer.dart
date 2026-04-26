@@ -35,7 +35,9 @@ class _ChatComposerState extends State<ChatComposer> {
   void _sendMessage() {
     final text = controller.text;
     if (text.trim().isEmpty) return;
-    context.read<ChatBloc>().add(ChatMessageSubmitted(text));
+    final bloc = context.read<ChatBloc>();
+    if (!bloc.state.canSend) return;
+    bloc.add(ChatMessageSubmitted(text));
     controller.clear();
   }
 
@@ -69,7 +71,6 @@ class _ChatComposerState extends State<ChatComposer> {
             spacing.md,
           ),
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Expanded(
                 child: TextField(
