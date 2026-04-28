@@ -117,8 +117,3 @@ app.*.map.json
 
 # Generated l10n files
 lib/l10n/gen/
-
-# Environment variables
-env-dev.json
-env-prod.json
-env-stg.json
