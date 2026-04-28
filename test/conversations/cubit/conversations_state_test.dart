@@ -15,16 +15,28 @@ void main() {
     );
   }
 
+  Folder buildFolder({
+    String id = 'f0',
+    String name = 'A folder',
+  }) {
+    return Folder(id: id, name: name, createdAt: DateTime.utc(2026, 4, 27));
+  }
+
   group(ConversationsState, () {
-    test('default state has no conversations and no transient error', () {
-      const state = ConversationsState();
-      expect(state.conversations, isEmpty);
-      expect(state.transientError, isNull);
-    });
+    test(
+      'default state has no conversations, no folders, and no transient error',
+      () {
+        final state = ConversationsState();
+        expect(state.conversations, isEmpty);
+        expect(state.folders, isEmpty);
+        expect(state.transientError, isNull);
+      },
+    );
 
     test('copyWith carries previous values when args are omitted', () {
       final seeded = ConversationsState(
         conversations: [buildConversation()],
+        folders: [buildFolder()],
         transientError: ConversationsTransientError.renameFailed,
       );
       expect(seeded.copyWith(), equals(seeded));
@@ -38,6 +50,12 @@ void main() {
         conversations: [buildConversation(id: 'b')],
       );
       expect(next.conversations.single.id, 'b');
+    });
+
+    test('copyWith replaces folders', () {
+      final seeded = ConversationsState(folders: [buildFolder(id: 'a')]);
+      final next = seeded.copyWith(folders: [buildFolder(id: 'b')]);
+      expect(next.folders.single.id, 'b');
     });
 
     test('copyWith sets transientError when provided', () {
@@ -56,12 +74,17 @@ void main() {
 
     test('supports value equality', () {
       final c = buildConversation();
+      final f = buildFolder();
       expect(
-        ConversationsState(conversations: [c]),
-        equals(ConversationsState(conversations: [c])),
+        ConversationsState(conversations: [c], folders: [f]),
+        equals(ConversationsState(conversations: [c], folders: [f])),
       );
       expect(
         ConversationsState(conversations: [c]),
+        isNot(equals(ConversationsState())),
+      );
+      expect(
+        ConversationsState(folders: [f]),
         isNot(equals(ConversationsState())),
       );
       expect(

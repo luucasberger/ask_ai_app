@@ -52,6 +52,18 @@
     "@drawerSectionConversations": {
         "description": "Encabezado de sección sobre la lista de conversaciones dentro del cajón"
     },
+    "drawerSectionFolders": "Carpetas",
+    "@drawerSectionFolders": {
+        "description": "Encabezado de sección sobre la lista de carpetas dentro del cajón"
+    },
+    "drawerSectionUncategorized": "Sin categoría",
+    "@drawerSectionUncategorized": {
+        "description": "Encabezado de sección sobre las conversaciones que no pertenecen a ninguna carpeta"
+    },
+    "drawerNewFolderTooltip": "Nueva carpeta",
+    "@drawerNewFolderTooltip": {
+        "description": "Tooltip / etiqueta de accesibilidad del botón + que crea una nueva carpeta"
+    },
     "conversationMenuRename": "Renombrar",
     "@conversationMenuRename": {
         "description": "Etiqueta de la acción Renombrar en el menú contextual de pulsación larga de la conversación"
@@ -59,6 +71,26 @@
     "conversationMenuDelete": "Eliminar",
     "@conversationMenuDelete": {
         "description": "Etiqueta de la acción Eliminar en el menú contextual de pulsación larga de la conversación"
+    },
+    "conversationMenuMoveToFolder": "Mover a carpeta…",
+    "@conversationMenuMoveToFolder": {
+        "description": "Etiqueta del submenú Mover a carpeta en el menú contextual de la conversación"
+    },
+    "conversationMenuMoveToUncategorized": "Sin categoría",
+    "@conversationMenuMoveToUncategorized": {
+        "description": "Entrada del submenú Mover a carpeta que saca a la conversación de cualquier carpeta"
+    },
+    "conversationMenuMoveToNewFolder": "Nueva carpeta…",
+    "@conversationMenuMoveToNewFolder": {
+        "description": "Entrada del submenú Mover a carpeta que crea una nueva carpeta y mueve la conversación a ella"
+    },
+    "folderMenuRename": "Renombrar",
+    "@folderMenuRename": {
+        "description": "Etiqueta de la acción Renombrar en el menú contextual de pulsación larga de la carpeta"
+    },
+    "folderMenuDelete": "Eliminar",
+    "@folderMenuDelete": {
+        "description": "Etiqueta de la acción Eliminar en el menú contextual de pulsación larga de la carpeta"
     },
     "renameConversationDialogTitle": "Renombrar conversación",
     "@renameConversationDialogTitle": {
@@ -92,6 +124,66 @@
     "@deleteConversationDialogConfirm": {
         "description": "Acción de confirmación en el diálogo de eliminar conversación"
     },
+    "createFolderDialogTitle": "Nueva carpeta",
+    "@createFolderDialogTitle": {
+        "description": "Título del diálogo mostrado al crear una nueva carpeta"
+    },
+    "createFolderDialogHint": "Nombre de la carpeta",
+    "@createFolderDialogHint": {
+        "description": "Texto de marcador del campo de texto del diálogo de crear carpeta"
+    },
+    "createFolderDialogCancel": "Cancelar",
+    "@createFolderDialogCancel": {
+        "description": "Acción Cancelar en el diálogo de crear carpeta"
+    },
+    "createFolderDialogCreate": "Crear",
+    "@createFolderDialogCreate": {
+        "description": "Acción Crear en el diálogo de crear carpeta"
+    },
+    "renameFolderDialogTitle": "Renombrar carpeta",
+    "@renameFolderDialogTitle": {
+        "description": "Título del diálogo mostrado cuando el usuario elige Renombrar en el menú contextual de la carpeta"
+    },
+    "renameFolderDialogHint": "Nombre de la carpeta",
+    "@renameFolderDialogHint": {
+        "description": "Texto de marcador del campo de texto del diálogo de renombrar carpeta"
+    },
+    "renameFolderDialogCancel": "Cancelar",
+    "@renameFolderDialogCancel": {
+        "description": "Acción Cancelar en el diálogo de renombrar carpeta"
+    },
+    "renameFolderDialogSave": "Guardar",
+    "@renameFolderDialogSave": {
+        "description": "Acción Guardar en el diálogo de renombrar carpeta"
+    },
+    "deleteFolderDialogTitle": "¿Eliminar '{name}'?",
+    "@deleteFolderDialogTitle": {
+        "description": "Título del diálogo de confirmación de eliminar carpeta. Incluye el nombre de la carpeta.",
+        "placeholders": {
+            "name": {
+                "type": "String",
+                "example": "Libros"
+            }
+        }
+    },
+    "deleteFolderDialogBody": "{count, plural, =0{Esta carpeta está vacía y se eliminará permanentemente.} =1{Esto eliminará permanentemente 1 conversación.} other{Esto eliminará permanentemente {count} conversaciones.}}",
+    "@deleteFolderDialogBody": {
+        "description": "Texto del cuerpo del diálogo de confirmación de eliminar carpeta. Incluye el conteo de conversaciones.",
+        "placeholders": {
+            "count": {
+                "type": "int",
+                "example": "12"
+            }
+        }
+    },
+    "deleteFolderDialogCancel": "Cancelar",
+    "@deleteFolderDialogCancel": {
+        "description": "Acción Cancelar en el diálogo de confirmación de eliminar carpeta"
+    },
+    "deleteFolderDialogConfirm": "Eliminar",
+    "@deleteFolderDialogConfirm": {
+        "description": "Acción de confirmación en el diálogo de eliminar carpeta"
+    },
     "conversationErrorRenameFailed": "No se pudo renombrar la conversación. Inténtalo de nuevo.",
     "@conversationErrorRenameFailed": {
         "description": "Snackbar mostrado cuando falla renombrar una conversación"
@@ -99,5 +191,21 @@
     "conversationErrorDeleteFailed": "No se pudo eliminar la conversación. Inténtalo de nuevo.",
     "@conversationErrorDeleteFailed": {
         "description": "Snackbar mostrado cuando falla eliminar una conversación"
+    },
+    "conversationErrorMoveFailed": "No se pudo mover la conversación. Inténtalo de nuevo.",
+    "@conversationErrorMoveFailed": {
+        "description": "Snackbar mostrado cuando falla mover una conversación entre carpetas"
+    },
+    "folderErrorCreateFailed": "No se pudo crear la carpeta. Inténtalo de nuevo.",
+    "@folderErrorCreateFailed": {
+        "description": "Snackbar mostrado cuando falla crear una carpeta"
+    },
+    "folderErrorRenameFailed": "No se pudo renombrar la carpeta. Inténtalo de nuevo.",
+    "@folderErrorRenameFailed": {
+        "description": "Snackbar mostrado cuando falla renombrar una carpeta"
+    },
+    "folderErrorDeleteFailed": "No se pudo eliminar la carpeta. Inténtalo de nuevo.",
+    "@folderErrorDeleteFailed": {
+        "description": "Snackbar mostrado cuando falla eliminar una carpeta"
     }
 }

@@ -52,6 +52,18 @@
     "@drawerSectionConversations": {
         "description": "Section header above the conversations list inside the drawer"
     },
+    "drawerSectionFolders": "Folders",
+    "@drawerSectionFolders": {
+        "description": "Section header above the folders list inside the drawer"
+    },
+    "drawerSectionUncategorized": "Uncategorized",
+    "@drawerSectionUncategorized": {
+        "description": "Section header above conversations that do not belong to any folder"
+    },
+    "drawerNewFolderTooltip": "New folder",
+    "@drawerNewFolderTooltip": {
+        "description": "Tooltip / accessibility label for the + button that creates a new folder"
+    },
     "conversationMenuRename": "Rename",
     "@conversationMenuRename": {
         "description": "Label for the Rename action in the conversation row's long-press context menu"
@@ -59,6 +71,26 @@
     "conversationMenuDelete": "Delete",
     "@conversationMenuDelete": {
         "description": "Label for the Delete action in the conversation row's long-press context menu"
+    },
+    "conversationMenuMoveToFolder": "Move to folder…",
+    "@conversationMenuMoveToFolder": {
+        "description": "Label for the Move to folder submenu in the conversation row's long-press context menu"
+    },
+    "conversationMenuMoveToUncategorized": "Uncategorized",
+    "@conversationMenuMoveToUncategorized": {
+        "description": "Entry in the Move to folder submenu that moves a conversation out of any folder"
+    },
+    "conversationMenuMoveToNewFolder": "New folder…",
+    "@conversationMenuMoveToNewFolder": {
+        "description": "Entry in the Move to folder submenu that creates a new folder and moves the conversation into it"
+    },
+    "folderMenuRename": "Rename",
+    "@folderMenuRename": {
+        "description": "Label for the Rename action in the folder row's long-press context menu"
+    },
+    "folderMenuDelete": "Delete",
+    "@folderMenuDelete": {
+        "description": "Label for the Delete action in the folder row's long-press context menu"
     },
     "renameConversationDialogTitle": "Rename conversation",
     "@renameConversationDialogTitle": {
@@ -92,6 +124,66 @@
     "@deleteConversationDialogConfirm": {
         "description": "Confirm action in the delete conversation confirmation dialog"
     },
+    "createFolderDialogTitle": "New folder",
+    "@createFolderDialogTitle": {
+        "description": "Title of the dialog shown when the user creates a new folder"
+    },
+    "createFolderDialogHint": "Folder name",
+    "@createFolderDialogHint": {
+        "description": "Placeholder text for the create folder dialog's text field"
+    },
+    "createFolderDialogCancel": "Cancel",
+    "@createFolderDialogCancel": {
+        "description": "Cancel action in the create folder dialog"
+    },
+    "createFolderDialogCreate": "Create",
+    "@createFolderDialogCreate": {
+        "description": "Create action in the create folder dialog"
+    },
+    "renameFolderDialogTitle": "Rename folder",
+    "@renameFolderDialogTitle": {
+        "description": "Title of the dialog shown when the user picks Rename from the folder context menu"
+    },
+    "renameFolderDialogHint": "Folder name",
+    "@renameFolderDialogHint": {
+        "description": "Placeholder text for the rename folder dialog's text field"
+    },
+    "renameFolderDialogCancel": "Cancel",
+    "@renameFolderDialogCancel": {
+        "description": "Cancel action in the rename folder dialog"
+    },
+    "renameFolderDialogSave": "Save",
+    "@renameFolderDialogSave": {
+        "description": "Save action in the rename folder dialog"
+    },
+    "deleteFolderDialogTitle": "Delete '{name}'?",
+    "@deleteFolderDialogTitle": {
+        "description": "Title of the folder delete confirmation dialog. Includes the folder name.",
+        "placeholders": {
+            "name": {
+                "type": "String",
+                "example": "Books"
+            }
+        }
+    },
+    "deleteFolderDialogBody": "{count, plural, =0{This folder is empty and will be permanently deleted.} =1{This will permanently delete 1 conversation.} other{This will permanently delete {count} conversations.}}",
+    "@deleteFolderDialogBody": {
+        "description": "Body copy of the folder delete confirmation dialog. Names the conversation count.",
+        "placeholders": {
+            "count": {
+                "type": "int",
+                "example": "12"
+            }
+        }
+    },
+    "deleteFolderDialogCancel": "Cancel",
+    "@deleteFolderDialogCancel": {
+        "description": "Cancel action in the delete folder confirmation dialog"
+    },
+    "deleteFolderDialogConfirm": "Delete",
+    "@deleteFolderDialogConfirm": {
+        "description": "Confirm action in the delete folder confirmation dialog"
+    },
     "conversationErrorRenameFailed": "Couldn't rename conversation. Please try again.",
     "@conversationErrorRenameFailed": {
         "description": "Snackbar shown when renaming a conversation fails"
@@ -99,5 +191,21 @@
     "conversationErrorDeleteFailed": "Couldn't delete conversation. Please try again.",
     "@conversationErrorDeleteFailed": {
         "description": "Snackbar shown when deleting a conversation fails"
+    },
+    "conversationErrorMoveFailed": "Couldn't move conversation. Please try again.",
+    "@conversationErrorMoveFailed": {
+        "description": "Snackbar shown when moving a conversation between folders fails"
+    },
+    "folderErrorCreateFailed": "Couldn't create folder. Please try again.",
+    "@folderErrorCreateFailed": {
+        "description": "Snackbar shown when creating a folder fails"
+    },
+    "folderErrorRenameFailed": "Couldn't rename folder. Please try again.",
+    "@folderErrorRenameFailed": {
+        "description": "Snackbar shown when renaming a folder fails"
+    },
+    "folderErrorDeleteFailed": "Couldn't delete folder. Please try again.",
+    "@folderErrorDeleteFailed": {
+        "description": "Snackbar shown when deleting a folder fails"
     }
 }

@@ -20,6 +20,10 @@ enum AppTransientError {
 
   /// Deleting a conversation failed in the storage layer.
   deleteFailed,
+
+  /// Deleting a folder (and its cascaded conversations) failed in the
+  /// storage layer.
+  folderDeleteFailed,
 }
 
 /// {@template app_state}

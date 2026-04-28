@@ -98,6 +98,25 @@ class ChatView extends StatelessWidget {
                     _onRenameRequested(context, conversation),
                 onDeleteRequested: (conversation) =>
                     _onDeleteRequested(context, conversation),
+                onMoveRequested: (conversation, folderId) => _onMoveRequested(
+                  context,
+                  conversation,
+                  folderId,
+                ),
+                onMoveToNewFolderRequested: (conversation) =>
+                    _onMoveToNewFolderRequested(
+                  context,
+                  conversation,
+                ),
+                onNewFolderRequested: () => _onNewFolderRequested(context),
+                onFolderRenameRequested: (folder) => _onFolderRenameRequested(
+                  context,
+                  folder,
+                ),
+                onFolderDeleteRequested: (folder) => _onFolderDeleteRequested(
+                  context,
+                  folder,
+                ),
               ),
             ),
             body: SafeArea(
@@ -133,6 +152,72 @@ class ChatView extends StatelessWidget {
     final confirmed = await DeleteConversationDialog.show(context);
     if (!confirmed) return;
     appBloc.add(AppConversationDeleted(conversation.id));
+  }
+
+  Future<void> _onMoveRequested(
+    BuildContext context,
+    Conversation conversation,
+    String? folderId,
+  ) async {
+    if (conversation.folderId == folderId) return;
+    await context.read<ConversationsCubit>().moveConversation(
+          id: conversation.id,
+          folderId: folderId,
+        );
+  }
+
+  Future<void> _onMoveToNewFolderRequested(
+    BuildContext context,
+    Conversation conversation,
+  ) async {
+    final cubit = context.read<ConversationsCubit>();
+    final name = await CreateFolderDialog.show(context);
+    if (name == null) return;
+    await cubit.moveConversationToNewFolder(
+      conversationId: conversation.id,
+      name: name,
+    );
+  }
+
+  Future<void> _onNewFolderRequested(BuildContext context) async {
+    final cubit = context.read<ConversationsCubit>();
+    final name = await CreateFolderDialog.show(context);
+    if (name == null) return;
+    await cubit.createFolder(name);
+  }
+
+  Future<void> _onFolderRenameRequested(
+    BuildContext context,
+    Folder folder,
+  ) async {
+    final cubit = context.read<ConversationsCubit>();
+    final newName = await RenameFolderDialog.show(context, folder);
+    if (newName == null) return;
+    await cubit.renameFolder(id: folder.id, name: newName);
+  }
+
+  Future<void> _onFolderDeleteRequested(
+    BuildContext context,
+    Folder folder,
+  ) async {
+    final appBloc = context.read<AppBloc>();
+    final cubit = context.read<ConversationsCubit>();
+    final cascading = cubit.state.conversations
+        .where((c) => c.folderId == folder.id)
+        .map((c) => c.id)
+        .toList(growable: false);
+    final confirmed = await DeleteFolderDialog.show(
+      context,
+      folder: folder,
+      conversationCount: cascading.length,
+    );
+    if (!confirmed) return;
+    appBloc.add(
+      AppFolderDeleted(
+        folderId: folder.id,
+        cascadingConversationIds: cascading,
+      ),
+    );
   }
 }
 
@@ -343,6 +428,7 @@ String _appErrorMessage(BuildContext context, AppTransientError error) {
     AppTransientError.sendFailed => l10n.chatErrorSendFailed,
     AppTransientError.messageTooLarge => l10n.chatErrorMessageTooLarge,
     AppTransientError.deleteFailed => l10n.conversationErrorDeleteFailed,
+    AppTransientError.folderDeleteFailed => l10n.folderErrorDeleteFailed,
   };
 }
 
@@ -354,5 +440,10 @@ String _conversationsErrorMessage(
   return switch (error) {
     ConversationsTransientError.renameFailed =>
       l10n.conversationErrorRenameFailed,
+    ConversationsTransientError.moveFailed => l10n.conversationErrorMoveFailed,
+    ConversationsTransientError.folderCreateFailed =>
+      l10n.folderErrorCreateFailed,
+    ConversationsTransientError.folderRenameFailed =>
+      l10n.folderErrorRenameFailed,
   };
 }

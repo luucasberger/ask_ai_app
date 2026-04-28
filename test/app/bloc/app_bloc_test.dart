@@ -316,6 +316,141 @@ void main() {
       });
     });
 
+    group(AppFolderDeleted, () {
+      void stubDeleteFolder() {
+        when(
+          () => conversationsRepository.deleteFolder(any()),
+        ).thenAnswer((_) async {});
+      }
+
+      blocTest<AppBloc, AppState>(
+        'deletes the folder via the repository',
+        setUp: stubDeleteFolder,
+        build: buildBloc,
+        act: (bloc) => bloc.add(
+          AppFolderDeleted(
+            folderId: 'f-1',
+            cascadingConversationIds: const [],
+          ),
+        ),
+        expect: () => <AppState>[],
+        verify: (_) {
+          verify(
+            () => conversationsRepository.deleteFolder('f-1'),
+          ).called(1);
+        },
+      );
+
+      blocTest<AppBloc, AppState>(
+        'leaves the active id intact when no cascaded ids match it',
+        seed: () => AppState(activeConversationId: 'c-other'),
+        setUp: stubDeleteFolder,
+        build: buildBloc,
+        act: (bloc) => bloc.add(
+          AppFolderDeleted(
+            folderId: 'f-1',
+            cascadingConversationIds: const ['c-1', 'c-2'],
+          ),
+        ),
+        expect: () => <AppState>[],
+        verify: (_) {
+          verifyNever(
+            () => conversationsRepository.writeMetadata(
+              key: lastActiveConversationKey,
+            ),
+          );
+        },
+      );
+
+      blocTest<AppBloc, AppState>(
+        'clears the active id and last-active metadata when the active '
+        'conversation was inside the deleted folder',
+        seed: () => AppState(
+          activeConversationId: 'c-1',
+          streamingMessageId: 'm-1',
+        ),
+        setUp: stubDeleteFolder,
+        build: buildBloc,
+        act: (bloc) => bloc.add(
+          AppFolderDeleted(
+            folderId: 'f-1',
+            cascadingConversationIds: const ['c-1', 'c-2'],
+          ),
+        ),
+        expect: () => [AppState()],
+        verify: (_) {
+          verify(
+            () => conversationsRepository.writeMetadata(
+              key: lastActiveConversationKey,
+            ),
+          ).called(1);
+        },
+      );
+
+      blocTest<AppBloc, AppState>(
+        'surfaces folderDeleteFailed when the repository throws',
+        setUp: () {
+          when(
+            () => conversationsRepository.deleteFolder(any()),
+          ).thenThrow(StorageException('boom'));
+        },
+        build: buildBloc,
+        act: (bloc) => bloc.add(
+          AppFolderDeleted(
+            folderId: 'f-1',
+            cascadingConversationIds: const ['c-1'],
+          ),
+        ),
+        expect: () => [
+          AppState(transientError: AppTransientError.folderDeleteFailed),
+        ],
+        verify: (_) {
+          verifyNever(
+            () => conversationsRepository.writeMetadata(
+              key: any(named: 'key'),
+              value: any(named: 'value'),
+            ),
+          );
+        },
+      );
+
+      test('disposes the chat repository for every cascaded conversation',
+          () async {
+        final repos = <_LiveChatRepository>[];
+        stubDeleteFolder();
+        final registry = buildRegistry(
+          factory: (_) {
+            final repo = _LiveChatRepository();
+            repos.add(repo);
+            return repo;
+          },
+        );
+        final bloc = AppBloc(
+          conversationsRepository: conversationsRepository,
+          chatRepositoryRegistry: registry,
+        );
+        addTearDown(bloc.close);
+
+        final initialA = await registry.obtain('c-a');
+        final initialB = await registry.obtain('c-b');
+        bloc.add(
+          AppFolderDeleted(
+            folderId: 'f-1',
+            cascadingConversationIds: const ['c-a', 'c-b'],
+          ),
+        );
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+
+        // Re-obtaining creates fresh repositories (proves the prior entries
+        // were disposed).
+        final freshA = await registry.obtain('c-a');
+        final freshB = await registry.obtain('c-b');
+        expect(identical(freshA, initialA), isFalse);
+        expect(identical(freshB, initialB), isFalse);
+        expect(repos, hasLength(4));
+      });
+    });
+
     group(AppFirstMessageSubmitted, () {
       final newConversation = Conversation(
         id: 'c-new',
@@ -707,6 +842,45 @@ void main() {
           isNot(equals(AppConversationDeleted('b'))),
         );
         expect(AppConversationDeleted('c').props, ['c']);
+      });
+
+      test('$AppFolderDeleted supports value equality', () {
+        expect(
+          AppFolderDeleted(
+            folderId: 'f',
+            cascadingConversationIds: const ['c-1'],
+          ),
+          equals(
+            AppFolderDeleted(
+              folderId: 'f',
+              cascadingConversationIds: const ['c-1'],
+            ),
+          ),
+        );
+        expect(
+          AppFolderDeleted(
+            folderId: 'a',
+            cascadingConversationIds: const [],
+          ),
+          isNot(
+            equals(
+              AppFolderDeleted(
+                folderId: 'b',
+                cascadingConversationIds: const [],
+              ),
+            ),
+          ),
+        );
+        expect(
+          AppFolderDeleted(
+            folderId: 'f',
+            cascadingConversationIds: const ['a'],
+          ).props,
+          [
+            'f',
+            ['a'],
+          ],
+        );
       });
 
       test('$AppFirstMessageSubmitted supports value equality', () {

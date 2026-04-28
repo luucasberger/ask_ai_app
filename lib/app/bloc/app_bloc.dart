@@ -42,6 +42,7 @@ class AppBloc extends Bloc<AppEvent, AppState> {
     on<AppConversationActivated>(_onConversationActivated);
     on<AppNewConversationRequested>(_onNewConversationRequested);
     on<AppConversationDeleted>(_onConversationDeleted);
+    on<AppFolderDeleted>(_onFolderDeleted);
     on<AppFirstMessageSubmitted>(_onFirstMessageSubmitted);
     on<AppEchoReceived>(_onEchoReceived);
     on<AppStreamingCompleted>(_onStreamingCompleted);
@@ -113,6 +114,34 @@ class AppBloc extends Bloc<AppEvent, AppState> {
     }
     await _chatRepositoryRegistry.dispose(id);
     if (state.activeConversationId == id) {
+      emit(
+        state.copyWith(
+          clearActiveConversationId: true,
+          clearStreamingMessageId: true,
+        ),
+      );
+      await _conversationsRepository.writeMetadata(
+        key: lastActiveConversationKey,
+      );
+    }
+  }
+
+  Future<void> _onFolderDeleted(
+    AppFolderDeleted event,
+    Emitter<AppState> emit,
+  ) async {
+    try {
+      await _conversationsRepository.deleteFolder(event.folderId);
+    } on Object {
+      emit(
+        state.copyWith(transientError: AppTransientError.folderDeleteFailed),
+      );
+      return;
+    }
+    for (final conversationId in event.cascadingConversationIds) {
+      await _chatRepositoryRegistry.dispose(conversationId);
+    }
+    if (event.cascadingConversationIds.contains(state.activeConversationId)) {
       emit(
         state.copyWith(
           clearActiveConversationId: true,

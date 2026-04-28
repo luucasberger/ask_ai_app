@@ -43,6 +43,29 @@ final class AppConversationDeleted extends AppEvent {
   List<Object?> get props => [conversationId];
 }
 
+/// Dispatched after the user confirms a folder delete from the folder
+/// row's long-press context menu. The handler removes the folder
+/// (drift cascades to its conversations and messages), tears down each
+/// cascaded conversation's registry entry, and clears the active id
+/// when the active conversation was inside the deleted folder.
+///
+/// [cascadingConversationIds] is the list of conversation ids that
+/// will be cascade-deleted by the folder removal — the caller computes
+/// it from the cubit's current state so the bloc does not need an
+/// extra database query.
+final class AppFolderDeleted extends AppEvent {
+  const AppFolderDeleted({
+    required this.folderId,
+    required this.cascadingConversationIds,
+  });
+
+  final String folderId;
+  final List<String> cascadingConversationIds;
+
+  @override
+  List<Object?> get props => [folderId, cascadingConversationIds];
+}
+
 /// Dispatched by the empty-state composer when the user submits the
 /// first message in a brand-new conversation. The handler creates
 /// the [Conversation] row, persists the user message, activates the

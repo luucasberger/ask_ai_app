@@ -6,7 +6,9 @@ import 'package:ask_ai_app/chat/view/chat_page.dart';
 import 'package:ask_ai_app/chat/widgets/chat_bubble.dart';
 import 'package:ask_ai_app/chat/widgets/chat_composer.dart';
 import 'package:ask_ai_app/chat/widgets/typewriter_text.dart';
+import 'package:ask_ai_app/conversations/cubit/conversations_cubit.dart';
 import 'package:ask_ai_app/conversations/widgets/conversation_tile.dart';
+import 'package:ask_ai_app/conversations/widgets/folder_tile.dart';
 import 'package:ask_ai_app/l10n/l10n.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:chat_client/chat_client.dart';
@@ -20,12 +22,15 @@ import '../../helpers/helpers.dart';
 void main() {
   setUpAll(() {
     registerFallbackValue(MessageRole.user);
-    registerFallbackValue(const AppConversationActivated('_'));
-    registerFallbackValue(const AppNewConversationRequested());
-    registerFallbackValue(const AppConversationDeleted('_'));
-    registerFallbackValue(const AppFirstMessageSubmitted('_'));
-    registerFallbackValue(const AppStreamingCompleted('_'));
-    registerFallbackValue(const AppTransientErrorCleared());
+    registerFallbackValue(AppConversationActivated('_'));
+    registerFallbackValue(AppNewConversationRequested());
+    registerFallbackValue(AppConversationDeleted('_'));
+    registerFallbackValue(
+      AppFolderDeleted(folderId: '_', cascadingConversationIds: const []),
+    );
+    registerFallbackValue(AppFirstMessageSubmitted('_'));
+    registerFallbackValue(AppStreamingCompleted('_'));
+    registerFallbackValue(AppTransientErrorCleared());
   });
 
   Conversation buildConversation({
@@ -65,6 +70,9 @@ void main() {
     chatRepositoryRegistry = buildStubChatRepositoryRegistry();
     when(conversationsRepository.watchConversations).thenAnswer(
       (_) => Stream<List<Conversation>>.value(const []),
+    );
+    when(conversationsRepository.watchFolders).thenAnswer(
+      (_) => Stream<List<Folder>>.value(const []),
     );
     when(() => conversationsRepository.watchMessages(any())).thenAnswer(
       (_) => Stream<List<Message>>.value(const []),
@@ -657,6 +665,553 @@ void main() {
     );
 
     testWidgets(
+      'new folder flow: confirming the dialog calls createFolder',
+      (tester) async {
+        when(
+          () => conversationsRepository.createFolder(any()),
+        ).thenAnswer(
+          (_) async => Folder(
+            id: 'f-new',
+            name: 'Books',
+            createdAt: DateTime.utc(2026, 4, 27),
+          ),
+        );
+        seedAppState(const AppState());
+
+        late final BuildContext capturedContext;
+        await tester.pumpApp(
+          Builder(
+            builder: (context) {
+              capturedContext = context;
+              return ChatPage();
+            },
+          ),
+          appBloc: appBloc,
+          conversationsRepository: conversationsRepository,
+          chatRepositoryRegistry: chatRepositoryRegistry,
+        );
+        await tester.pump();
+
+        await tester.tap(find.byTooltip('Open navigation menu'));
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.byTooltip(capturedContext.l10n.drawerNewFolderTooltip),
+        );
+        await tester.pumpAndSettle();
+        await tester.enterText(
+          find.byKey(const Key('createFolderDialog_textField')),
+          'Books',
+        );
+        await tester.pump();
+        await tester.tap(
+          find.text(capturedContext.l10n.createFolderDialogCreate),
+        );
+        await tester.pumpAndSettle();
+
+        verify(() => conversationsRepository.createFolder('Books')).called(1);
+      },
+    );
+
+    testWidgets(
+      'new folder flow: cancelling does not call createFolder',
+      (tester) async {
+        seedAppState(const AppState());
+
+        late final BuildContext capturedContext;
+        await tester.pumpApp(
+          Builder(
+            builder: (context) {
+              capturedContext = context;
+              return ChatPage();
+            },
+          ),
+          appBloc: appBloc,
+          conversationsRepository: conversationsRepository,
+          chatRepositoryRegistry: chatRepositoryRegistry,
+        );
+        await tester.pump();
+
+        await tester.tap(find.byTooltip('Open navigation menu'));
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.byTooltip(capturedContext.l10n.drawerNewFolderTooltip),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.text(capturedContext.l10n.createFolderDialogCancel),
+        );
+        await tester.pumpAndSettle();
+
+        verifyNever(() => conversationsRepository.createFolder(any()));
+      },
+    );
+
+    testWidgets(
+      'folder rename flow: saving calls renameFolder',
+      (tester) async {
+        when(conversationsRepository.watchFolders).thenAnswer(
+          (_) => Stream<List<Folder>>.value([
+            Folder(
+              id: 'f-1',
+              name: 'Books',
+              createdAt: DateTime.utc(2026, 4, 27),
+            ),
+          ]),
+        );
+        when(
+          () => conversationsRepository.renameFolder(
+            id: any(named: 'id'),
+            name: any(named: 'name'),
+          ),
+        ).thenAnswer((_) async {});
+        seedAppState(const AppState());
+
+        late final BuildContext capturedContext;
+        await tester.pumpApp(
+          Builder(
+            builder: (context) {
+              capturedContext = context;
+              return ChatPage();
+            },
+          ),
+          appBloc: appBloc,
+          conversationsRepository: conversationsRepository,
+          chatRepositoryRegistry: chatRepositoryRegistry,
+        );
+        await tester.pump();
+
+        await tester.tap(find.byTooltip('Open navigation menu'));
+        await tester.pumpAndSettle();
+        await tester.longPress(find.byType(FolderTile));
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.text(capturedContext.l10n.folderMenuRename),
+        );
+        await tester.pumpAndSettle();
+        await tester.enterText(
+          find.byKey(const Key('renameFolderDialog_textField')),
+          'Reading',
+        );
+        await tester.pump();
+        await tester.tap(
+          find.text(capturedContext.l10n.renameFolderDialogSave),
+        );
+        await tester.pumpAndSettle();
+
+        verify(
+          () => conversationsRepository.renameFolder(
+            id: 'f-1',
+            name: 'Reading',
+          ),
+        ).called(1);
+      },
+    );
+
+    testWidgets(
+      'folder rename flow: cancelling does not call renameFolder',
+      (tester) async {
+        when(conversationsRepository.watchFolders).thenAnswer(
+          (_) => Stream<List<Folder>>.value([
+            Folder(
+              id: 'f-1',
+              name: 'Books',
+              createdAt: DateTime.utc(2026, 4, 27),
+            ),
+          ]),
+        );
+        seedAppState(const AppState());
+
+        late final BuildContext capturedContext;
+        await tester.pumpApp(
+          Builder(
+            builder: (context) {
+              capturedContext = context;
+              return ChatPage();
+            },
+          ),
+          appBloc: appBloc,
+          conversationsRepository: conversationsRepository,
+          chatRepositoryRegistry: chatRepositoryRegistry,
+        );
+        await tester.pump();
+
+        await tester.tap(find.byTooltip('Open navigation menu'));
+        await tester.pumpAndSettle();
+        await tester.longPress(find.byType(FolderTile));
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.text(capturedContext.l10n.folderMenuRename),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.text(capturedContext.l10n.renameFolderDialogCancel),
+        );
+        await tester.pumpAndSettle();
+
+        verifyNever(
+          () => conversationsRepository.renameFolder(
+            id: any(named: 'id'),
+            name: any(named: 'name'),
+          ),
+        );
+      },
+    );
+
+    testWidgets(
+      'folder delete flow: confirming dispatches $AppFolderDeleted with '
+      'cascading ids',
+      (tester) async {
+        when(conversationsRepository.watchFolders).thenAnswer(
+          (_) => Stream<List<Folder>>.value([
+            Folder(
+              id: 'f-1',
+              name: 'Books',
+              createdAt: DateTime.utc(2026, 4, 27),
+            ),
+          ]),
+        );
+        when(conversationsRepository.watchConversations).thenAnswer(
+          (_) => Stream<List<Conversation>>.value([
+            Conversation(
+              id: 'c-1',
+              title: 'Inside',
+              folderId: 'f-1',
+              createdAt: DateTime.utc(2026, 4, 27),
+              updatedAt: DateTime.utc(2026, 4, 27),
+            ),
+          ]),
+        );
+        seedAppState(const AppState());
+
+        late final BuildContext capturedContext;
+        await tester.pumpApp(
+          Builder(
+            builder: (context) {
+              capturedContext = context;
+              return ChatPage();
+            },
+          ),
+          appBloc: appBloc,
+          conversationsRepository: conversationsRepository,
+          chatRepositoryRegistry: chatRepositoryRegistry,
+        );
+        await tester.pump();
+
+        await tester.tap(find.byTooltip('Open navigation menu'));
+        await tester.pumpAndSettle();
+        await tester.longPress(find.byType(FolderTile));
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.text(capturedContext.l10n.folderMenuDelete),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.text(capturedContext.l10n.deleteFolderDialogConfirm),
+        );
+        await tester.pumpAndSettle();
+
+        verify(
+          () => appBloc.add(
+            const AppFolderDeleted(
+              folderId: 'f-1',
+              cascadingConversationIds: ['c-1'],
+            ),
+          ),
+        ).called(1);
+      },
+    );
+
+    testWidgets(
+      'folder delete flow: cancelling does not dispatch $AppFolderDeleted',
+      (tester) async {
+        when(conversationsRepository.watchFolders).thenAnswer(
+          (_) => Stream<List<Folder>>.value([
+            Folder(
+              id: 'f-1',
+              name: 'Books',
+              createdAt: DateTime.utc(2026, 4, 27),
+            ),
+          ]),
+        );
+        seedAppState(const AppState());
+
+        late final BuildContext capturedContext;
+        await tester.pumpApp(
+          Builder(
+            builder: (context) {
+              capturedContext = context;
+              return ChatPage();
+            },
+          ),
+          appBloc: appBloc,
+          conversationsRepository: conversationsRepository,
+          chatRepositoryRegistry: chatRepositoryRegistry,
+        );
+        await tester.pump();
+
+        await tester.tap(find.byTooltip('Open navigation menu'));
+        await tester.pumpAndSettle();
+        await tester.longPress(find.byType(FolderTile));
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.text(capturedContext.l10n.folderMenuDelete),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.text(capturedContext.l10n.deleteFolderDialogCancel),
+        );
+        await tester.pumpAndSettle();
+
+        verifyNever(
+          () => appBloc.add(any(that: isA<AppFolderDeleted>())),
+        );
+      },
+    );
+
+    testWidgets(
+      'move flow: picking an existing folder calls moveConversation',
+      (tester) async {
+        when(conversationsRepository.watchConversations).thenAnswer(
+          (_) => Stream<List<Conversation>>.value([
+            buildConversation(id: 'c-1', title: 'Loose'),
+          ]),
+        );
+        when(conversationsRepository.watchFolders).thenAnswer(
+          (_) => Stream<List<Folder>>.value([
+            Folder(
+              id: 'f-1',
+              name: 'Books',
+              createdAt: DateTime.utc(2026, 4, 27),
+            ),
+          ]),
+        );
+        when(
+          () => conversationsRepository.moveConversation(
+            id: any(named: 'id'),
+            folderId: any(named: 'folderId'),
+          ),
+        ).thenAnswer((_) async {});
+        seedAppState(const AppState());
+
+        late final BuildContext capturedContext;
+        await tester.pumpApp(
+          Builder(
+            builder: (context) {
+              capturedContext = context;
+              return ChatPage();
+            },
+          ),
+          appBloc: appBloc,
+          conversationsRepository: conversationsRepository,
+          chatRepositoryRegistry: chatRepositoryRegistry,
+        );
+        await tester.pump();
+
+        await tester.tap(find.byTooltip('Open navigation menu'));
+        await tester.pumpAndSettle();
+        await tester.longPress(find.byType(ConversationTile));
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.text(capturedContext.l10n.conversationMenuMoveToFolder),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.widgetWithText(MenuItemButton, 'Books'));
+        await tester.pumpAndSettle();
+
+        verify(
+          () => conversationsRepository.moveConversation(
+            id: 'c-1',
+            folderId: 'f-1',
+          ),
+        ).called(1);
+      },
+    );
+
+    testWidgets(
+      'move flow: picking the same folder is a no-op',
+      (tester) async {
+        when(conversationsRepository.watchConversations).thenAnswer(
+          (_) => Stream<List<Conversation>>.value([
+            Conversation(
+              id: 'c-1',
+              title: 'Inside',
+              folderId: 'f-1',
+              createdAt: DateTime.utc(2026, 4, 27),
+              updatedAt: DateTime.utc(2026, 4, 27),
+            ),
+          ]),
+        );
+        when(conversationsRepository.watchFolders).thenAnswer(
+          (_) => Stream<List<Folder>>.value([
+            Folder(
+              id: 'f-1',
+              name: 'Books',
+              createdAt: DateTime.utc(2026, 4, 27),
+            ),
+          ]),
+        );
+        seedAppState(const AppState());
+
+        late final BuildContext capturedContext;
+        await tester.pumpApp(
+          Builder(
+            builder: (context) {
+              capturedContext = context;
+              return ChatPage();
+            },
+          ),
+          appBloc: appBloc,
+          conversationsRepository: conversationsRepository,
+          chatRepositoryRegistry: chatRepositoryRegistry,
+        );
+        await tester.pump();
+
+        await tester.tap(find.byTooltip('Open navigation menu'));
+        await tester.pumpAndSettle();
+        // Expand the folder so the nested conversation is reachable.
+        await tester.tap(find.text('Books'));
+        await tester.pumpAndSettle();
+        await tester.longPress(find.byType(ConversationTile));
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.text(capturedContext.l10n.conversationMenuMoveToFolder),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.widgetWithText(MenuItemButton, 'Books'));
+        await tester.pumpAndSettle();
+
+        verifyNever(
+          () => conversationsRepository.moveConversation(
+            id: any(named: 'id'),
+            folderId: any(named: 'folderId'),
+          ),
+        );
+      },
+    );
+
+    testWidgets(
+      'move to new folder flow: confirming creates a folder and moves',
+      (tester) async {
+        when(conversationsRepository.watchConversations).thenAnswer(
+          (_) => Stream<List<Conversation>>.value([
+            buildConversation(id: 'c-1', title: 'Loose'),
+          ]),
+        );
+        when(
+          () => conversationsRepository.createFolder(any()),
+        ).thenAnswer(
+          (_) async => Folder(
+            id: 'f-new',
+            name: 'Books',
+            createdAt: DateTime.utc(2026, 4, 27),
+          ),
+        );
+        when(
+          () => conversationsRepository.moveConversation(
+            id: any(named: 'id'),
+            folderId: any(named: 'folderId'),
+          ),
+        ).thenAnswer((_) async {});
+        seedAppState(const AppState());
+
+        late final BuildContext capturedContext;
+        await tester.pumpApp(
+          Builder(
+            builder: (context) {
+              capturedContext = context;
+              return ChatPage();
+            },
+          ),
+          appBloc: appBloc,
+          conversationsRepository: conversationsRepository,
+          chatRepositoryRegistry: chatRepositoryRegistry,
+        );
+        await tester.pump();
+
+        await tester.tap(find.byTooltip('Open navigation menu'));
+        await tester.pumpAndSettle();
+        await tester.longPress(find.byType(ConversationTile));
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.text(capturedContext.l10n.conversationMenuMoveToFolder),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.text(capturedContext.l10n.conversationMenuMoveToNewFolder),
+        );
+        await tester.pumpAndSettle();
+        await tester.enterText(
+          find.byKey(const Key('createFolderDialog_textField')),
+          'Books',
+        );
+        await tester.pump();
+        await tester.tap(
+          find.text(capturedContext.l10n.createFolderDialogCreate),
+        );
+        await tester.pumpAndSettle();
+
+        verify(() => conversationsRepository.createFolder('Books')).called(1);
+        verify(
+          () => conversationsRepository.moveConversation(
+            id: 'c-1',
+            folderId: 'f-new',
+          ),
+        ).called(1);
+      },
+    );
+
+    testWidgets(
+      'move to new folder flow: cancelling the dialog skips create+move',
+      (tester) async {
+        when(conversationsRepository.watchConversations).thenAnswer(
+          (_) => Stream<List<Conversation>>.value([
+            buildConversation(id: 'c-1', title: 'Loose'),
+          ]),
+        );
+        seedAppState(const AppState());
+
+        late final BuildContext capturedContext;
+        await tester.pumpApp(
+          Builder(
+            builder: (context) {
+              capturedContext = context;
+              return ChatPage();
+            },
+          ),
+          appBloc: appBloc,
+          conversationsRepository: conversationsRepository,
+          chatRepositoryRegistry: chatRepositoryRegistry,
+        );
+        await tester.pump();
+
+        await tester.tap(find.byTooltip('Open navigation menu'));
+        await tester.pumpAndSettle();
+        await tester.longPress(find.byType(ConversationTile));
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.text(capturedContext.l10n.conversationMenuMoveToFolder),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.text(capturedContext.l10n.conversationMenuMoveToNewFolder),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.text(capturedContext.l10n.createFolderDialogCancel),
+        );
+        await tester.pumpAndSettle();
+
+        verifyNever(() => conversationsRepository.createFolder(any()));
+        verifyNever(
+          () => conversationsRepository.moveConversation(
+            id: any(named: 'id'),
+            folderId: any(named: 'folderId'),
+          ),
+        );
+      },
+    );
+
+    testWidgets(
       'delete flow: cancelling does not dispatch $AppConversationDeleted',
       (tester) async {
         when(conversationsRepository.watchConversations).thenAnswer(
@@ -734,9 +1289,160 @@ void main() {
           AppTransientError.sendFailed => l10n.chatErrorSendFailed,
           AppTransientError.messageTooLarge => l10n.chatErrorMessageTooLarge,
           AppTransientError.deleteFailed => l10n.conversationErrorDeleteFailed,
+          AppTransientError.folderDeleteFailed => l10n.folderErrorDeleteFailed,
         };
         expect(find.text(expected), findsOneWidget);
       });
+    }
+
+    for (final error in ConversationsTransientError.values) {
+      testWidgets(
+        'conversations-level error $error renders a localized snackbar',
+        (tester) async {
+          // Wire a single conversation/folder so the long-press context menu
+          // can drive each error path.
+          when(conversationsRepository.watchConversations).thenAnswer(
+            (_) => Stream<List<Conversation>>.value([
+              buildConversation(id: 'c-1', title: 'Loose'),
+            ]),
+          );
+          when(conversationsRepository.watchFolders).thenAnswer(
+            (_) => Stream<List<Folder>>.value([
+              Folder(
+                id: 'f-1',
+                name: 'Books',
+                createdAt: DateTime.utc(2026, 4, 27),
+              ),
+            ]),
+          );
+
+          // Each variant gets its own throwing stub on the path that the
+          // dialog flow actually calls.
+          switch (error) {
+            case ConversationsTransientError.renameFailed:
+              when(
+                () => conversationsRepository.renameConversation(
+                  id: any(named: 'id'),
+                  title: any(named: 'title'),
+                ),
+              ).thenThrow(StorageException('boom'));
+            case ConversationsTransientError.moveFailed:
+              when(
+                () => conversationsRepository.moveConversation(
+                  id: any(named: 'id'),
+                  folderId: any(named: 'folderId'),
+                ),
+              ).thenThrow(StorageException('boom'));
+            case ConversationsTransientError.folderCreateFailed:
+              when(
+                () => conversationsRepository.createFolder(any()),
+              ).thenThrow(StorageException('boom'));
+            case ConversationsTransientError.folderRenameFailed:
+              when(
+                () => conversationsRepository.renameFolder(
+                  id: any(named: 'id'),
+                  name: any(named: 'name'),
+                ),
+              ).thenThrow(StorageException('boom'));
+          }
+
+          seedAppState(const AppState());
+
+          late final BuildContext capturedContext;
+          await tester.pumpApp(
+            Builder(
+              builder: (context) {
+                capturedContext = context;
+                return ChatPage();
+              },
+            ),
+            appBloc: appBloc,
+            conversationsRepository: conversationsRepository,
+            chatRepositoryRegistry: chatRepositoryRegistry,
+          );
+          await tester.pump();
+
+          await tester.tap(find.byTooltip('Open navigation menu'));
+          await tester.pumpAndSettle();
+
+          switch (error) {
+            case ConversationsTransientError.renameFailed:
+              await tester.longPress(find.byType(ConversationTile));
+              await tester.pumpAndSettle();
+              await tester.tap(
+                find.text(capturedContext.l10n.conversationMenuRename),
+              );
+              await tester.pumpAndSettle();
+              await tester.enterText(
+                find.byKey(const Key('renameConversationDialog_textField')),
+                'Updated',
+              );
+              await tester.pump();
+              await tester.tap(
+                find.text(
+                  capturedContext.l10n.renameConversationDialogSave,
+                ),
+              );
+              await tester.pumpAndSettle();
+            case ConversationsTransientError.moveFailed:
+              await tester.longPress(find.byType(ConversationTile));
+              await tester.pumpAndSettle();
+              await tester.tap(
+                find.text(
+                  capturedContext.l10n.conversationMenuMoveToFolder,
+                ),
+              );
+              await tester.pumpAndSettle();
+              await tester.tap(
+                find.widgetWithText(MenuItemButton, 'Books'),
+              );
+              await tester.pumpAndSettle();
+            case ConversationsTransientError.folderCreateFailed:
+              await tester.tap(
+                find.byTooltip(capturedContext.l10n.drawerNewFolderTooltip),
+              );
+              await tester.pumpAndSettle();
+              await tester.enterText(
+                find.byKey(const Key('createFolderDialog_textField')),
+                'Reading',
+              );
+              await tester.pump();
+              await tester.tap(
+                find.text(capturedContext.l10n.createFolderDialogCreate),
+              );
+              await tester.pumpAndSettle();
+            case ConversationsTransientError.folderRenameFailed:
+              await tester.longPress(find.byType(FolderTile));
+              await tester.pumpAndSettle();
+              await tester.tap(
+                find.text(capturedContext.l10n.folderMenuRename),
+              );
+              await tester.pumpAndSettle();
+              await tester.enterText(
+                find.byKey(const Key('renameFolderDialog_textField')),
+                'Reading',
+              );
+              await tester.pump();
+              await tester.tap(
+                find.text(capturedContext.l10n.renameFolderDialogSave),
+              );
+              await tester.pumpAndSettle();
+          }
+
+          final l10n = capturedContext.l10n;
+          final expected = switch (error) {
+            ConversationsTransientError.renameFailed =>
+              l10n.conversationErrorRenameFailed,
+            ConversationsTransientError.moveFailed =>
+              l10n.conversationErrorMoveFailed,
+            ConversationsTransientError.folderCreateFailed =>
+              l10n.folderErrorCreateFailed,
+            ConversationsTransientError.folderRenameFailed =>
+              l10n.folderErrorRenameFailed,
+          };
+          expect(find.text(expected), findsOneWidget);
+        },
+      );
     }
 
     for (final error in ChatTransientError.values) {
