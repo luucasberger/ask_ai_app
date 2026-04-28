@@ -1,5 +1,6 @@
 import 'package:app_ui/app_ui.dart';
 import 'package:ask_ai_app/app/bloc/app_bloc.dart';
+import 'package:ask_ai_app/app/registry/chat_repository_registry.dart';
 import 'package:ask_ai_app/l10n/l10n.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:conversations_repository/conversations_repository.dart';
@@ -14,13 +15,19 @@ extension PumpApp on WidgetTester {
   Future<void> pumpApp(
     Widget widget, {
     ConversationsRepository? conversationsRepository,
+    ChatRepositoryRegistry? chatRepositoryRegistry,
     AppBloc? appBloc,
   }) {
     final repo = conversationsRepository ?? FakeConversationsRepository();
+    final registry =
+        chatRepositoryRegistry ?? buildStubChatRepositoryRegistry();
     final bloc = appBloc ?? (_StubAppBloc()..stub(const AppState()));
     return pumpWidget(
-      RepositoryProvider<ConversationsRepository>.value(
-        value: repo,
+      MultiRepositoryProvider(
+        providers: [
+          RepositoryProvider<ConversationsRepository>.value(value: repo),
+          RepositoryProvider<ChatRepositoryRegistry>.value(value: registry),
+        ],
         child: BlocProvider<AppBloc>.value(
           value: bloc,
           child: MaterialApp(

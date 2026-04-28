@@ -1,4 +1,5 @@
 import 'package:ask_ai_app/app/bloc/app_bloc.dart';
+import 'package:ask_ai_app/app/registry/chat_repository_registry.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:chat_repository/chat_repository.dart';
 import 'package:conversations_repository/conversations_repository.dart';
@@ -56,3 +57,23 @@ class MockConversationsRepository extends Mock
 /// Mockable [AppBloc] for widget tests that need to assert dispatched
 /// events or stub state transitions.
 class MockAppBloc extends MockBloc<AppEvent, AppState> implements AppBloc {}
+
+/// Mockable [ChatRepositoryRegistry] for tests that need to stub
+/// `obtain` or control the `echoes` stream.
+class MockChatRepositoryRegistry extends Mock
+    implements ChatRepositoryRegistry {}
+
+/// Returns a [MockChatRepositoryRegistry] pre-stubbed with an empty
+/// `echoes` stream and a default `obtain` that yields a
+/// [FakeChatRepository]. Suitable for widget tests that do not
+/// interact with the registry.
+MockChatRepositoryRegistry buildStubChatRepositoryRegistry() {
+  final registry = MockChatRepositoryRegistry();
+  when(() => registry.echoes).thenAnswer(
+    (_) => const Stream<EchoEvent>.empty(),
+  );
+  when(() => registry.obtain(any())).thenAnswer(
+    (_) async => FakeChatRepository(),
+  );
+  return registry;
+}

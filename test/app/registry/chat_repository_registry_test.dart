@@ -11,22 +11,26 @@ void main() {
   group(ChatRepositoryRegistry, () {
     late Map<String, MockChatRepository> repos;
     late Map<String, StreamController<String>> controllers;
-    late List<(String, String)> echoes;
+    late List<EchoEvent> echoes;
+    late StreamSubscription<EchoEvent> echoSubscription;
 
-    ChatRepositoryRegistry buildRegistry() => ChatRepositoryRegistry(
-      factory: (id) {
-        final repo = repos[id] = MockChatRepository();
-        final controller = controllers[id] =
-            StreamController<String>.broadcast();
-        when(() => repo.incomingMessages).thenAnswer(
-          (_) => controller.stream,
-        );
-        when(repo.connect).thenAnswer((_) async {});
-        when(repo.disconnect).thenAnswer((_) async {});
-        return repo;
-      },
-      onEcho: (id, text) => echoes.add((id, text)),
-    );
+    ChatRepositoryRegistry buildRegistry() {
+      final registry = ChatRepositoryRegistry(
+        factory: (id) {
+          final repo = repos[id] = MockChatRepository();
+          final controller = controllers[id] =
+              StreamController<String>.broadcast();
+          when(() => repo.incomingMessages).thenAnswer(
+            (_) => controller.stream,
+          );
+          when(repo.connect).thenAnswer((_) async {});
+          when(repo.disconnect).thenAnswer((_) async {});
+          return repo;
+        },
+      );
+      echoSubscription = registry.echoes.listen(echoes.add);
+      return registry;
+    }
 
     setUp(() {
       repos = {};
@@ -35,6 +39,7 @@ void main() {
     });
 
     tearDown(() async {
+      await echoSubscription.cancel();
       for (final c in controllers.values) {
         await c.close();
       }
@@ -60,8 +65,7 @@ void main() {
         verify(repos['a']!.connect).called(1);
       });
 
-      test('forwards incoming messages to onEcho with the conversation id',
-          () async {
+      test('emits echoes tagged with the conversation id', () async {
         final registry = buildRegistry();
         await registry.obtain('a');
         await registry.obtain('b');
@@ -70,13 +74,15 @@ void main() {
         controllers['b']!.add('world');
         await Future<void>.delayed(Duration.zero);
 
-        expect(echoes, [('a', 'hello'), ('b', 'world')]);
+        expect(echoes, [
+          (conversationId: 'a', text: 'hello'),
+          (conversationId: 'b', text: 'world'),
+        ]);
       });
 
       test('drops the entry when the connect call fails', () async {
-        ChatRepositoryRegistry? registry;
         var calls = 0;
-        registry = ChatRepositoryRegistry(
+        final registry = ChatRepositoryRegistry(
           factory: (id) {
             calls++;
             final repo = repos[id] = MockChatRepository();
@@ -93,11 +99,11 @@ void main() {
             }
             return repo;
           },
-          onEcho: (_, __) {},
         );
+        addTearDown(registry.disposeAll);
 
         await expectLater(
-          () => registry!.obtain('a'),
+          () => registry.obtain('a'),
           throwsA(isA<ConnectException>()),
         );
         await registry.obtain('a');
@@ -130,7 +136,8 @@ void main() {
     });
 
     group('disposeAll', () {
-      test('disposes every registered repository', () async {
+      test('disposes every registered repository and closes echoes',
+          () async {
         final registry = buildRegistry();
         await registry.obtain('a');
         await registry.obtain('b');
@@ -139,6 +146,8 @@ void main() {
 
         verify(repos['a']!.disconnect).called(1);
         verify(repos['b']!.disconnect).called(1);
+        expect(registry.echoes.isBroadcast, isTrue);
+        await expectLater(registry.echoes, emitsDone);
       });
     });
   });

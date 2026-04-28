@@ -24,23 +24,20 @@ const _autoTitleMaxLength = 40;
 /// messages, the in-progress typewriter id, and the orchestration
 /// of the very first send in a brand-new conversation.
 ///
-/// Per-conversation [ChatRepository]s live inside the registry and
-/// outlive any individual chat page; the bloc subscribes to each
-/// repository's echoes via the registry's callback.
+/// Per-conversation [ChatRepository]s live inside the
+/// [ChatRepositoryRegistry] (a peer dependency in the widget tree),
+/// not the bloc. The bloc subscribes to
+/// [ChatRepositoryRegistry.echoes] and forwards each event as an
+/// [AppEchoReceived].
 /// {@endtemplate}
 class AppBloc extends Bloc<AppEvent, AppState> {
   /// {@macro app_bloc}
   AppBloc({
     required ConversationsRepository conversationsRepository,
-    required ChatRepositoryFactory chatRepositoryFactory,
-  })  : _conversationsRepository = conversationsRepository,
-        super(const AppState()) {
-    _registry = ChatRepositoryRegistry(
-      factory: chatRepositoryFactory,
-      onEcho: (id, text) => add(
-        AppEchoReceived(conversationId: id, text: text),
-      ),
-    );
+    required ChatRepositoryRegistry chatRepositoryRegistry,
+  }) : _conversationsRepository = conversationsRepository,
+       _chatRepositoryRegistry = chatRepositoryRegistry,
+       super(const AppState()) {
     on<AppStarted>(_onStarted);
     on<AppConversationActivated>(_onConversationActivated);
     on<AppNewConversationRequested>(_onNewConversationRequested);
@@ -48,16 +45,20 @@ class AppBloc extends Bloc<AppEvent, AppState> {
     on<AppEchoReceived>(_onEchoReceived);
     on<AppStreamingCompleted>(_onStreamingCompleted);
     on<AppTransientErrorCleared>(_onTransientErrorCleared);
+
+    _echoSubscription = chatRepositoryRegistry.echoes.listen(
+      (event) => add(
+        AppEchoReceived(
+          conversationId: event.conversationId,
+          text: event.text,
+        ),
+      ),
+    );
   }
 
   final ConversationsRepository _conversationsRepository;
-  late final ChatRepositoryRegistry _registry;
-
-  /// Returns the [ChatRepository] for [conversationId], creating and
-  /// connecting it on first request. Throws [ChatClientException] if
-  /// the connection cannot be established.
-  Future<ChatRepository> obtainChatRepository(String conversationId) =>
-      _registry.obtain(conversationId);
+  final ChatRepositoryRegistry _chatRepositoryRegistry;
+  late final StreamSubscription<EchoEvent> _echoSubscription;
 
   Future<void> _onStarted(AppStarted event, Emitter<AppState> emit) async {
     final id = await _conversationsRepository.readMetadata(
@@ -136,7 +137,7 @@ class AppBloc extends Bloc<AppEvent, AppState> {
 
     final ChatRepository repository;
     try {
-      repository = await obtainChatRepository(conversation.id);
+      repository = await _chatRepositoryRegistry.obtain(conversation.id);
     } on ChatClientException {
       emit(state.copyWith(transientError: AppTransientError.connectionFailed));
       return;
@@ -198,7 +199,7 @@ class AppBloc extends Bloc<AppEvent, AppState> {
 
   @override
   Future<void> close() async {
-    await _registry.disposeAll();
+    await _echoSubscription.cancel();
     return super.close();
   }
 }

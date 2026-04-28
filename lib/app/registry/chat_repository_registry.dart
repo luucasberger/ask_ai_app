@@ -7,14 +7,11 @@ import 'package:chat_repository/chat_repository.dart';
 /// instance — the registry owns the lifecycle of each repository.
 typedef ChatRepositoryFactory = ChatRepository Function(String conversationId);
 
-/// {@template echo_received_callback}
-/// Invoked once per echoed assistant message, with the conversation id
-/// the echo belongs to and the message text.
+/// {@template echo_event}
+/// One assistant echo emitted on [ChatRepositoryRegistry.echoes],
+/// carrying the conversation the echo belongs to and the message text.
 /// {@endtemplate}
-typedef EchoReceivedCallback = void Function(
-  String conversationId,
-  String text,
-);
+typedef EchoEvent = ({String conversationId, String text});
 
 /// {@template chat_repository_registry}
 /// App-level registry of [ChatRepository] instances keyed by
@@ -25,20 +22,27 @@ typedef EchoReceivedCallback = void Function(
 /// outlives any individual chat page, so an in-flight echo continues
 /// to land even after the user navigates away from the conversation
 /// that issued the send.
+///
+/// Echoes are surfaced through the [echoes] broadcast stream rather
+/// than a callback so the registry can be plain dependency-tree state
+/// (no bloc back-reference) and any number of subscribers can listen.
 /// {@endtemplate}
 class ChatRepositoryRegistry {
   /// {@macro chat_repository_registry}
   ChatRepositoryRegistry({
     required ChatRepositoryFactory factory,
-    required EchoReceivedCallback onEcho,
-  })  : _factory = factory,
-        _onEcho = onEcho;
+  }) : _factory = factory;
 
   final ChatRepositoryFactory _factory;
-  final EchoReceivedCallback _onEcho;
+  final StreamController<EchoEvent> _echoController =
+      StreamController<EchoEvent>.broadcast();
 
   final Map<String, ChatRepository> _repositories = {};
   final Map<String, StreamSubscription<String>> _subscriptions = {};
+
+  /// Broadcast stream of every assistant echo received by any
+  /// repository in the registry, tagged with its conversation id.
+  Stream<EchoEvent> get echoes => _echoController.stream;
 
   /// Returns the [ChatRepository] for [conversationId], lazily
   /// creating and connecting it on first request.
@@ -59,7 +63,9 @@ class ChatRepositoryRegistry {
       rethrow;
     }
     _subscriptions[conversationId] = repository.incomingMessages.listen(
-      (text) => _onEcho(conversationId, text),
+      (text) => _echoController.add(
+        (conversationId: conversationId, text: text),
+      ),
     );
     return repository;
   }
@@ -71,9 +77,11 @@ class ChatRepositoryRegistry {
     await repository?.disconnect();
   }
 
-  /// Disposes every connection. Called once during app shutdown.
+  /// Disposes every connection and closes [echoes]. Called once
+  /// during app shutdown.
   Future<void> disposeAll() async {
     final ids = _repositories.keys.toList(growable: false);
     await Future.wait(ids.map(dispose));
+    await _echoController.close();
   }
 }

@@ -43,8 +43,9 @@ final class AppFirstMessageSubmitted extends AppEvent {
   List<Object?> get props => [text];
 }
 
-/// Dispatched by the [ChatRepositoryRegistry] subscription whenever
-/// the chat backend echoes a message back for [conversationId].
+/// Dispatched by the [ChatRepositoryRegistry.echoes] subscription
+/// whenever the chat backend echoes a message back for
+/// [conversationId].
 final class AppEchoReceived extends AppEvent {
   const AppEchoReceived({required this.conversationId, required this.text});
 

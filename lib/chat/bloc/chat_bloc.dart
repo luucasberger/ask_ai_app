@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:ask_ai_app/app/registry/chat_repository_registry.dart';
 import 'package:bloc/bloc.dart';
 import 'package:chat_client/chat_client.dart';
 import 'package:chat_repository/chat_repository.dart';
@@ -9,25 +10,13 @@ import 'package:equatable/equatable.dart';
 part 'chat_event.dart';
 part 'chat_state.dart';
 
-/// Signature for the function the [ChatBloc] uses to obtain the
-/// [ChatRepository] for its conversation when a message needs to be
-/// sent over the wire.
-///
-/// The app-level bloc supplies this hook (see
-/// `AppBloc.obtainChatRepository`) so the connection lifecycle is
-/// owned outside the chat surface — a per-conversation socket can
-/// outlive any individual mount of the chat view.
-typedef ChatRepositoryProvider = Future<ChatRepository> Function(
-  String conversationId,
-);
-
 /// {@template chat_bloc}
 /// Owns the chat surface for a single conversation.
 ///
 /// Subscribes to [ConversationsRepository.watchMessages] for the
 /// bloc's conversation id and forwards user submissions to the
-/// conversation's [ChatRepository] (obtained on demand via
-/// [ChatRepositoryProvider]). The user message is persisted before
+/// conversation's [ChatRepository] (resolved on demand from the
+/// [ChatRepositoryRegistry]). The user message is persisted before
 /// the send so the UI reflects the user's intent immediately.
 ///
 /// "Awaiting response" is derived structurally from
@@ -42,11 +31,11 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   ChatBloc({
     required String conversationId,
     required ConversationsRepository conversationsRepository,
-    required ChatRepositoryProvider chatRepositoryProvider,
-  })  : _conversationId = conversationId,
-        _conversationsRepository = conversationsRepository,
-        _chatRepositoryProvider = chatRepositoryProvider,
-        super(const ChatState()) {
+    required ChatRepositoryRegistry chatRepositoryRegistry,
+  }) : _conversationId = conversationId,
+       _conversationsRepository = conversationsRepository,
+       _chatRepositoryRegistry = chatRepositoryRegistry,
+       super(const ChatState()) {
     on<ChatMessagesUpdated>(_onMessagesUpdated);
     on<ChatMessageSubmitted>(_onMessageSubmitted);
     on<ChatTransientErrorCleared>(_onTransientErrorCleared);
@@ -58,7 +47,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
   final String _conversationId;
   final ConversationsRepository _conversationsRepository;
-  final ChatRepositoryProvider _chatRepositoryProvider;
+  final ChatRepositoryRegistry _chatRepositoryRegistry;
   late final StreamSubscription<List<Message>> _messagesSubscription;
 
   void _onMessagesUpdated(
@@ -94,7 +83,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
     final ChatRepository repository;
     try {
-      repository = await _chatRepositoryProvider(_conversationId);
+      repository = await _chatRepositoryRegistry.obtain(_conversationId);
     } on ChatClientException {
       emit(
         state.copyWith(transientError: ChatTransientError.connectionFailed),

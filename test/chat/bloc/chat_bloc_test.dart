@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:ask_ai_app/chat/bloc/chat_bloc.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:chat_client/chat_client.dart';
-import 'package:chat_repository/chat_repository.dart';
 import 'package:conversations_repository/conversations_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -20,9 +19,8 @@ void main() {
 
     late MockConversationsRepository conversationsRepository;
     late MockChatRepository chatRepository;
+    late MockChatRepositoryRegistry chatRepositoryRegistry;
     late StreamController<List<Message>> messagesController;
-    Future<ChatRepository> Function(String) chatRepositoryProvider =
-        (_) async => throw UnimplementedError();
 
     Message buildMessage({
       String id = 'm0',
@@ -41,6 +39,7 @@ void main() {
     setUp(() {
       conversationsRepository = MockConversationsRepository();
       chatRepository = MockChatRepository();
+      chatRepositoryRegistry = MockChatRepositoryRegistry();
       messagesController = StreamController<List<Message>>.broadcast();
 
       when(
@@ -59,7 +58,9 @@ void main() {
         ),
       );
       when(() => chatRepository.send(any())).thenAnswer((_) async {});
-      chatRepositoryProvider = (_) async => chatRepository;
+      when(() => chatRepositoryRegistry.obtain(any())).thenAnswer(
+        (_) async => chatRepository,
+      );
     });
 
     tearDown(() async {
@@ -69,7 +70,7 @@ void main() {
     ChatBloc buildBloc() => ChatBloc(
       conversationId: conversationId,
       conversationsRepository: conversationsRepository,
-      chatRepositoryProvider: (id) => chatRepositoryProvider(id),
+      chatRepositoryRegistry: chatRepositoryRegistry,
     );
 
     test('initial state is empty with no transient error', () {
@@ -142,6 +143,7 @@ void main() {
               text: 'hi',
             ),
           ).called(1);
+          verify(() => chatRepositoryRegistry.obtain(conversationId)).called(1);
           verify(() => chatRepository.send('hi')).called(1);
         },
       );
@@ -168,9 +170,11 @@ void main() {
       );
 
       blocTest<ChatBloc, ChatState>(
-        'emits connectionFailed when the repository provider rejects',
+        'emits connectionFailed when the registry rejects',
         setUp: () {
-          chatRepositoryProvider = (_) async => throw ConnectException('boom');
+          when(() => chatRepositoryRegistry.obtain(any())).thenThrow(
+            ConnectException('boom'),
+          );
         },
         build: buildBloc,
         act: (bloc) => bloc.add(ChatMessageSubmitted('hi')),

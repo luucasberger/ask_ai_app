@@ -142,7 +142,7 @@ class _ActiveChatBody extends StatelessWidget {
       create: (context) => ChatBloc(
         conversationId: conversationId,
         conversationsRepository: context.read(),
-        chatRepositoryProvider: context.read<AppBloc>().obtainChatRepository,
+        chatRepositoryRegistry: context.read(),
       ),
       child: BlocListener<ChatBloc, ChatState>(
         listenWhen: (oldState, newState) =>

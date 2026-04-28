@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:app_ui/app_ui.dart';
 import 'package:ask_ai_app/app/bloc/app_bloc.dart';
 import 'package:ask_ai_app/app/registry/chat_repository_registry.dart';
@@ -18,12 +20,20 @@ class App extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return RepositoryProvider.value(
-      value: conversationsRepository,
+    return MultiRepositoryProvider(
+      providers: [
+        RepositoryProvider<ConversationsRepository>.value(
+          value: conversationsRepository,
+        ),
+        RepositoryProvider<ChatRepositoryRegistry>(
+          create: (_) => ChatRepositoryRegistry(factory: chatRepositoryFactory),
+          dispose: (registry) => unawaited(registry.disposeAll()),
+        ),
+      ],
       child: BlocProvider(
-        create: (_) => AppBloc(
-          conversationsRepository: conversationsRepository,
-          chatRepositoryFactory: chatRepositoryFactory,
+        create: (context) => AppBloc(
+          conversationsRepository: context.read<ConversationsRepository>(),
+          chatRepositoryRegistry: context.read<ChatRepositoryRegistry>(),
         )..add(const AppStarted()),
         child: GestureDetector(
           onTap: () => FocusManager.instance.primaryFocus?.unfocus(),

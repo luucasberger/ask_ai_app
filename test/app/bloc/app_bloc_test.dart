@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:ask_ai_app/app/bloc/app_bloc.dart';
+import 'package:ask_ai_app/app/registry/chat_repository_registry.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:chat_client/chat_client.dart';
 import 'package:chat_repository/chat_repository.dart';
@@ -97,9 +98,17 @@ void main() {
       ).thenAnswer((_) async {});
     });
 
-    AppBloc buildBloc() => AppBloc(
+    ChatRepositoryRegistry buildRegistry({ChatRepositoryFactory? factory}) {
+      final registry = ChatRepositoryRegistry(
+        factory: factory ?? (_) => _FakeChatRepository(),
+      );
+      addTearDown(registry.disposeAll);
+      return registry;
+    }
+
+    AppBloc buildBloc({ChatRepositoryFactory? factory}) => AppBloc(
       conversationsRepository: conversationsRepository,
-      chatRepositoryFactory: (_) => _FakeChatRepository(),
+      chatRepositoryRegistry: buildRegistry(factory: factory),
     );
 
     test('initial state has no active conversation and no streaming', () {
@@ -339,9 +348,8 @@ void main() {
       blocTest<AppBloc, AppState>(
         'surfaces connectionFailed when the chat repository fails to connect',
         setUp: stubPersistence,
-        build: () => AppBloc(
-          conversationsRepository: conversationsRepository,
-          chatRepositoryFactory: (_) =>
+        build: () => buildBloc(
+          factory: (_) =>
               _ThrowingConnectChatRepository(ConnectException('no')),
         ),
         act: (bloc) => bloc.add(AppFirstMessageSubmitted('hi')),
@@ -357,9 +365,8 @@ void main() {
       blocTest<AppBloc, AppState>(
         'surfaces messageTooLarge when send rejects oversized payloads',
         setUp: stubPersistence,
-        build: () => AppBloc(
-          conversationsRepository: conversationsRepository,
-          chatRepositoryFactory: (_) => _ThrowingSendChatRepository(
+        build: () => buildBloc(
+          factory: (_) => _ThrowingSendChatRepository(
             MessageTooLargeException('too large'),
           ),
         ),
@@ -376,10 +383,8 @@ void main() {
       blocTest<AppBloc, AppState>(
         'surfaces sendFailed for other transport errors on send',
         setUp: stubPersistence,
-        build: () => AppBloc(
-          conversationsRepository: conversationsRepository,
-          chatRepositoryFactory: (_) =>
-              _ThrowingSendChatRepository(SendException('nope')),
+        build: () => buildBloc(
+          factory: (_) => _ThrowingSendChatRepository(SendException('nope')),
         ),
         act: (bloc) => bloc.add(AppFirstMessageSubmitted('hi')),
         expect: () => [
@@ -520,22 +525,6 @@ void main() {
       );
     });
 
-    group('obtainChatRepository', () {
-      test('delegates to the registry and returns the connected repository',
-          () async {
-        final repo = _FakeChatRepository();
-        final bloc = AppBloc(
-          conversationsRepository: conversationsRepository,
-          chatRepositoryFactory: (_) => repo,
-        );
-        addTearDown(bloc.close);
-
-        final result = await bloc.obtainChatRepository('c-1');
-
-        expect(identical(result, repo), isTrue);
-      });
-    });
-
     group('echo wiring', () {
       test('forwards registry echoes as $AppEchoReceived events', () async {
         final repo = _LiveChatRepository();
@@ -554,13 +543,14 @@ void main() {
           ),
         ).thenAnswer((_) async => assistantMessage);
 
+        final registry = buildRegistry(factory: (_) => repo);
         final bloc = AppBloc(
           conversationsRepository: conversationsRepository,
-          chatRepositoryFactory: (_) => repo,
+          chatRepositoryRegistry: registry,
         );
         addTearDown(bloc.close);
 
-        await bloc.obtainChatRepository('c-1');
+        await registry.obtain('c-1');
         repo.addEcho('hi');
         await Future<void>.delayed(const Duration(milliseconds: 50));
 

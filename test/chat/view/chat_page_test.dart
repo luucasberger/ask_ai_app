@@ -55,18 +55,17 @@ void main() {
 
   late MockAppBloc appBloc;
   late MockConversationsRepository conversationsRepository;
+  late MockChatRepositoryRegistry chatRepositoryRegistry;
 
   setUp(() {
     appBloc = MockAppBloc();
     conversationsRepository = MockConversationsRepository();
+    chatRepositoryRegistry = buildStubChatRepositoryRegistry();
     when(conversationsRepository.watchConversations).thenAnswer(
       (_) => Stream<List<Conversation>>.value(const []),
     );
     when(() => conversationsRepository.watchMessages(any())).thenAnswer(
       (_) => Stream<List<Message>>.value(const []),
-    );
-    when(() => appBloc.obtainChatRepository(any())).thenAnswer(
-      (_) async => FakeChatRepository(),
     );
   });
 
@@ -88,6 +87,7 @@ void main() {
         ChatPage(),
         appBloc: appBloc,
         conversationsRepository: conversationsRepository,
+        chatRepositoryRegistry: chatRepositoryRegistry,
       );
       await tester.pump();
 
@@ -111,6 +111,7 @@ void main() {
           ),
           appBloc: appBloc,
           conversationsRepository: conversationsRepository,
+          chatRepositoryRegistry: chatRepositoryRegistry,
         );
         await tester.pump();
 
@@ -138,6 +139,7 @@ void main() {
           ),
           appBloc: appBloc,
           conversationsRepository: conversationsRepository,
+          chatRepositoryRegistry: chatRepositoryRegistry,
         );
         await tester.pump();
 
@@ -165,6 +167,7 @@ void main() {
           ChatPage(),
           appBloc: appBloc,
           conversationsRepository: conversationsRepository,
+          chatRepositoryRegistry: chatRepositoryRegistry,
         );
         await tester.pump();
 
@@ -187,6 +190,7 @@ void main() {
           ChatPage(),
           appBloc: appBloc,
           conversationsRepository: conversationsRepository,
+          chatRepositoryRegistry: chatRepositoryRegistry,
         );
         await tester.pump();
 
@@ -225,6 +229,7 @@ void main() {
           ChatPage(),
           appBloc: appBloc,
           conversationsRepository: conversationsRepository,
+          chatRepositoryRegistry: chatRepositoryRegistry,
         );
         await tester.pump();
 
@@ -255,6 +260,7 @@ void main() {
           ChatPage(),
           appBloc: appBloc,
           conversationsRepository: conversationsRepository,
+          chatRepositoryRegistry: chatRepositoryRegistry,
         );
         await tester.pump();
 
@@ -301,6 +307,7 @@ void main() {
           ChatPage(),
           appBloc: appBloc,
           conversationsRepository: conversationsRepository,
+          chatRepositoryRegistry: chatRepositoryRegistry,
         );
         await tester.pump();
 
@@ -335,6 +342,7 @@ void main() {
           ChatPage(),
           appBloc: appBloc,
           conversationsRepository: conversationsRepository,
+          chatRepositoryRegistry: chatRepositoryRegistry,
         );
         await tester.pump();
         await tester.pump();
@@ -370,6 +378,7 @@ void main() {
           ),
           appBloc: appBloc,
           conversationsRepository: conversationsRepository,
+          chatRepositoryRegistry: chatRepositoryRegistry,
         );
         await tester.pump();
         await tester.pump();
@@ -395,6 +404,7 @@ void main() {
           ChatPage(),
           appBloc: appBloc,
           conversationsRepository: conversationsRepository,
+          chatRepositoryRegistry: chatRepositoryRegistry,
         );
         await tester.pump();
 
@@ -427,6 +437,7 @@ void main() {
           ChatPage(),
           appBloc: appBloc,
           conversationsRepository: conversationsRepository,
+          chatRepositoryRegistry: chatRepositoryRegistry,
         );
         await tester.pump();
 
@@ -463,6 +474,7 @@ void main() {
           ),
           appBloc: appBloc,
           conversationsRepository: conversationsRepository,
+          chatRepositoryRegistry: chatRepositoryRegistry,
         );
         await tester.pump();
         await tester.pump();
@@ -511,7 +523,7 @@ void main() {
                 text: any(named: 'text'),
               ),
             ).thenAnswer((_) async => buildMessage());
-            when(() => appBloc.obtainChatRepository(any())).thenThrow(
+            when(() => chatRepositoryRegistry.obtain(any())).thenThrow(
               ConnectException('no'),
             );
           case ChatTransientError.sendFailed:
@@ -533,7 +545,7 @@ void main() {
                 text: any(named: 'text'),
               ),
             ).thenAnswer((_) async => buildMessage());
-            when(() => appBloc.obtainChatRepository(any())).thenAnswer(
+            when(() => chatRepositoryRegistry.obtain(any())).thenAnswer(
               (_) async => repo,
             );
         }
@@ -548,6 +560,7 @@ void main() {
           ),
           appBloc: appBloc,
           conversationsRepository: conversationsRepository,
+          chatRepositoryRegistry: chatRepositoryRegistry,
         );
         await tester.pump();
 
