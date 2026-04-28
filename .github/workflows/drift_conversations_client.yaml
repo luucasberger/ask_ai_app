@@ -1,0 +1,27 @@
+name: drift_conversations_client
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "packages/conversations_client/drift_conversations_client/**"
+      - ".github/workflows/drift_conversations_client.yaml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "packages/conversations_client/drift_conversations_client/**"
+      - ".github/workflows/drift_conversations_client.yaml"
+
+jobs:
+  build:
+    uses: VeryGoodOpenSource/very_good_workflows/.github/workflows/dart_package.yml@v1
+    with:
+      working_directory: packages/conversations_client/drift_conversations_client
+      coverage_excludes: "**/*.g.dart"
+      run_bloc_lint: false

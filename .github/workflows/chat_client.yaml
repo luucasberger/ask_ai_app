@@ -1,0 +1,26 @@
+name: chat_client
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "packages/chat_client/chat_client/**"
+      - ".github/workflows/chat_client.yaml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "packages/chat_client/chat_client/**"
+      - ".github/workflows/chat_client.yaml"
+
+jobs:
+  build:
+    uses: VeryGoodOpenSource/very_good_workflows/.github/workflows/dart_package.yml@v1
+    with:
+      working_directory: packages/chat_client/chat_client
+      run_bloc_lint: false

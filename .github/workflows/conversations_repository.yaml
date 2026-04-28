@@ -1,0 +1,26 @@
+name: conversations_repository
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "packages/conversations_repository/**"
+      - ".github/workflows/conversations_repository.yaml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "packages/conversations_repository/**"
+      - ".github/workflows/conversations_repository.yaml"
+
+jobs:
+  build:
+    uses: VeryGoodOpenSource/very_good_workflows/.github/workflows/dart_package.yml@v1
+    with:
+      working_directory: packages/conversations_repository
+      run_bloc_lint: false

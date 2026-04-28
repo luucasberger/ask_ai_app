@@ -1,0 +1,27 @@
+name: app_ui
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "packages/app_ui/**"
+      - ".github/workflows/app_ui.yaml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "packages/app_ui/**"
+      - ".github/workflows/app_ui.yaml"
+
+jobs:
+  build:
+    uses: VeryGoodOpenSource/very_good_workflows/.github/workflows/flutter_package.yml@v1
+    with:
+      working_directory: packages/app_ui
+      flutter_version: "3.41.7"
+      run_bloc_lint: false

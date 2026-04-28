@@ -1,0 +1,26 @@
+name: conversations_client
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "packages/conversations_client/conversations_client/**"
+      - ".github/workflows/conversations_client.yaml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "packages/conversations_client/conversations_client/**"
+      - ".github/workflows/conversations_client.yaml"
+
+jobs:
+  build:
+    uses: VeryGoodOpenSource/very_good_workflows/.github/workflows/dart_package.yml@v1
+    with:
+      working_directory: packages/conversations_client/conversations_client
+      run_bloc_lint: false
