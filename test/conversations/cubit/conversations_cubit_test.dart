@@ -38,8 +38,8 @@ void main() {
     });
 
     ConversationsCubit buildCubit() => ConversationsCubit(
-      conversationsRepository: conversationsRepository,
-    );
+          conversationsRepository: conversationsRepository,
+        );
 
     test('initial state has no conversations', () {
       expect(buildCubit().state, ConversationsState());

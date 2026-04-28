@@ -35,9 +35,9 @@ class AppBloc extends Bloc<AppEvent, AppState> {
   AppBloc({
     required ConversationsRepository conversationsRepository,
     required ChatRepositoryRegistry chatRepositoryRegistry,
-  }) : _conversationsRepository = conversationsRepository,
-       _chatRepositoryRegistry = chatRepositoryRegistry,
-       super(const AppState()) {
+  })  : _conversationsRepository = conversationsRepository,
+        _chatRepositoryRegistry = chatRepositoryRegistry,
+        super(const AppState()) {
     on<AppStarted>(_onStarted);
     on<AppConversationActivated>(_onConversationActivated);
     on<AppNewConversationRequested>(_onNewConversationRequested);

@@ -18,8 +18,8 @@ void main() {
       final registry = ChatRepositoryRegistry(
         factory: (id) {
           final repo = repos[id] = MockChatRepository();
-          final controller = controllers[id] =
-              StreamController<String>.broadcast();
+          final controller =
+              controllers[id] = StreamController<String>.broadcast();
           when(() => repo.incomingMessages).thenAnswer(
             (_) => controller.stream,
           );
@@ -86,8 +86,8 @@ void main() {
           factory: (id) {
             calls++;
             final repo = repos[id] = MockChatRepository();
-            final controller = controllers[id] =
-                StreamController<String>.broadcast();
+            final controller =
+                controllers[id] = StreamController<String>.broadcast();
             when(() => repo.incomingMessages).thenAnswer(
               (_) => controller.stream,
             );
@@ -113,8 +113,7 @@ void main() {
     });
 
     group('dispose', () {
-      test('cancels the subscription and disconnects the repository',
-          () async {
+      test('cancels the subscription and disconnects the repository', () async {
         final registry = buildRegistry();
         await registry.obtain('a');
 
@@ -136,8 +135,7 @@ void main() {
     });
 
     group('disposeAll', () {
-      test('disposes every registered repository and closes echoes',
-          () async {
+      test('disposes every registered repository and closes echoes', () async {
         final registry = buildRegistry();
         await registry.obtain('a');
         await registry.obtain('b');

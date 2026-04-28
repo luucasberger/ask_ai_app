@@ -18,13 +18,13 @@ class ConversationsCubit extends Cubit<ConversationsState> {
   /// {@macro conversations_cubit}
   ConversationsCubit({
     required ConversationsRepository conversationsRepository,
-  }) : _conversationsRepository = conversationsRepository,
-       super(const ConversationsState()) {
+  })  : _conversationsRepository = conversationsRepository,
+        super(const ConversationsState()) {
     _subscription = _conversationsRepository.watchConversations().listen(
-      (conversations) => emit(
-        state.copyWith(conversations: conversations),
-      ),
-    );
+          (conversations) => emit(
+            state.copyWith(conversations: conversations),
+          ),
+        );
   }
 
   final ConversationsRepository _conversationsRepository;

@@ -107,9 +107,9 @@ void main() {
     }
 
     AppBloc buildBloc({ChatRepositoryFactory? factory}) => AppBloc(
-      conversationsRepository: conversationsRepository,
-      chatRepositoryRegistry: buildRegistry(factory: factory),
-    );
+          conversationsRepository: conversationsRepository,
+          chatRepositoryRegistry: buildRegistry(factory: factory),
+        );
 
     test('initial state has no active conversation and no streaming', () {
       expect(

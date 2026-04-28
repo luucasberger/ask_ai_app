@@ -58,16 +58,15 @@ final class AppState extends Equatable {
       streamingMessageId: clearStreamingMessageId
           ? null
           : streamingMessageId ?? this.streamingMessageId,
-      transientError: clearTransientError
-          ? null
-          : transientError ?? this.transientError,
+      transientError:
+          clearTransientError ? null : transientError ?? this.transientError,
     );
   }
 
   @override
   List<Object?> get props => [
-    activeConversationId,
-    streamingMessageId,
-    transientError,
-  ];
+        activeConversationId,
+        streamingMessageId,
+        transientError,
+      ];
 }

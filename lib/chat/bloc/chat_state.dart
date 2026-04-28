@@ -45,9 +45,8 @@ final class ChatState extends Equatable {
   }) {
     return ChatState(
       messages: messages ?? this.messages,
-      transientError: clearTransientError
-          ? null
-          : transientError ?? this.transientError,
+      transientError:
+          clearTransientError ? null : transientError ?? this.transientError,
     );
   }
 

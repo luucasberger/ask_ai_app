@@ -32,10 +32,10 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     required String conversationId,
     required ConversationsRepository conversationsRepository,
     required ChatRepositoryRegistry chatRepositoryRegistry,
-  }) : _conversationId = conversationId,
-       _conversationsRepository = conversationsRepository,
-       _chatRepositoryRegistry = chatRepositoryRegistry,
-       super(const ChatState()) {
+  })  : _conversationId = conversationId,
+        _conversationsRepository = conversationsRepository,
+        _chatRepositoryRegistry = chatRepositoryRegistry,
+        super(const ChatState()) {
     on<ChatMessagesUpdated>(_onMessagesUpdated);
     on<ChatMessageSubmitted>(_onMessageSubmitted);
     on<ChatTransientErrorCleared>(_onTransientErrorCleared);

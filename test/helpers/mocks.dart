@@ -35,8 +35,7 @@ class FakeConversationsRepository extends Fake
       Stream<List<Conversation>>.value(const []);
 
   @override
-  Stream<List<Folder>> watchFolders() =>
-      Stream<List<Folder>>.value(const []);
+  Stream<List<Folder>> watchFolders() => Stream<List<Folder>>.value(const []);
 
   @override
   Stream<List<Message>> watchMessages(String conversationId) =>

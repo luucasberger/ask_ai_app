@@ -68,10 +68,10 @@ void main() {
     });
 
     ChatBloc buildBloc() => ChatBloc(
-      conversationId: conversationId,
-      conversationsRepository: conversationsRepository,
-      chatRepositoryRegistry: chatRepositoryRegistry,
-    );
+          conversationId: conversationId,
+          conversationsRepository: conversationsRepository,
+          chatRepositoryRegistry: chatRepositoryRegistry,
+        );
 
     test('initial state is empty with no transient error', () {
       expect(buildBloc().state, ChatState());
