@@ -15,6 +15,11 @@ dependencies:
     path: packages/chat_client/chat_client
   chat_repository:
     path: packages/chat_repository
+  conversations_repository:
+    path: packages/conversations_repository
+  drift: ^2.20.0
+  drift_conversations_client:
+    path: packages/conversations_client/drift_conversations_client
   equatable: ^2.0.7
   flutter:
     sdk: flutter
@@ -22,6 +27,9 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   intl: ^0.20.2
+  path: ^1.9.1
+  path_provider: ^2.1.5
+  sqlite3_flutter_libs: ^0.5.27
   web_socket_chat_client:
     path: packages/chat_client/web_socket_chat_client
 

@@ -1,17 +1,33 @@
 import 'package:app_ui/app_ui.dart';
-import 'package:ask_ai_app/chat/bloc/chat_bloc.dart';
 import 'package:ask_ai_app/l10n/l10n.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 
 /// {@template chat_composer}
-/// The bottom-of-screen input row: a [TextField] for the user's next
-/// message paired with a send button that swaps to a circular progress
+/// The bottom-of-screen input row: a [TextField] for the next message
+/// paired with a send button that swaps to a circular progress
 /// indicator while a response is in flight (including the typewriter
 /// reveal).
+///
+/// The composer is intentionally bloc-agnostic — the parent passes
+/// [onSubmit] and the [inFlight] gate, and decides whether the
+/// submission goes through `ChatBloc` (active conversation) or
+/// `AppBloc` (empty-state first send).
 /// {@endtemplate}
 class ChatComposer extends StatefulWidget {
   /// {@macro chat_composer}
-  const ChatComposer({super.key});
+  const ChatComposer({
+    required this.onSubmit,
+    required this.inFlight,
+    super.key,
+  });
+
+  /// Invoked with the raw (untrimmed) text from the field when the
+  /// user taps send (or hits the keyboard send action). Only fires
+  /// when the trimmed text is non-empty and [inFlight] is `false`.
+  final ValueChanged<String> onSubmit;
+
+  /// `true` while a response is in flight — the send button renders
+  /// as a spinner and submissions are blocked.
+  final bool inFlight;
 
   @override
   State<ChatComposer> createState() => _ChatComposerState();
@@ -33,11 +49,10 @@ class _ChatComposerState extends State<ChatComposer> {
   }
 
   void _sendMessage() {
+    if (widget.inFlight) return;
     final text = controller.text;
     if (text.trim().isEmpty) return;
-    final bloc = context.read<ChatBloc>();
-    if (!bloc.state.canSend) return;
-    bloc.add(ChatMessageSubmitted(text));
+    widget.onSubmit(text);
     controller.clear();
   }
 
@@ -45,62 +60,38 @@ class _ChatComposerState extends State<ChatComposer> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final spacing = context.appSpacing;
-    return BlocBuilder<ChatBloc, ChatState>(
-      buildWhen: (oldState, newState) {
-        if (oldState.canSend != newState.canSend) {
-          return true;
-        }
-
-        if (oldState.isResponseInFlight != newState.isResponseInFlight) {
-          return true;
-        }
-
-        if (oldState.status != newState.status) {
-          return true;
-        }
-
-        return false;
-      },
-      builder: (context, state) {
-        final isReady = state.status == ChatStatus.ready;
-        return Padding(
-          padding: EdgeInsets.fromLTRB(
-            spacing.md,
-            spacing.xs,
-            spacing.md,
-            spacing.md,
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        spacing.md,
+        spacing.xs,
+        spacing.md,
+        spacing.md,
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: controller,
+              textInputAction: TextInputAction.send,
+              minLines: 1,
+              maxLines: 4,
+              onSubmitted: (_) => _sendMessage(),
+              decoration: InputDecoration(hintText: l10n.chatComposerHint),
+            ),
           ),
-          child: Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: controller,
-                  enabled: isReady,
-                  textInputAction: TextInputAction.send,
-                  minLines: 1,
-                  maxLines: 4,
-                  onSubmitted: (_) => _sendMessage(),
-                  decoration: InputDecoration(hintText: l10n.chatComposerHint),
-                ),
-              ),
-              SizedBox(width: spacing.xs),
-              _SendButton(
-                inFlight: state.isResponseInFlight,
-                onPressed: state.canSend ? _sendMessage : null,
-              ),
-            ],
+          SizedBox(width: spacing.xs),
+          _SendButton(
+            inFlight: widget.inFlight,
+            onPressed: widget.inFlight ? null : _sendMessage,
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 }
 
 class _SendButton extends StatelessWidget {
-  const _SendButton({
-    required this.inFlight,
-    required this.onPressed,
-  });
+  const _SendButton({required this.inFlight, required this.onPressed});
 
   final bool inFlight;
   final VoidCallback? onPressed;

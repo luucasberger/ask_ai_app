@@ -35,5 +35,21 @@
     "chatErrorMessageTooLarge": "Message is too long.",
     "@chatErrorMessageTooLarge": {
         "description": "Snackbar shown when the user tries to send a message that exceeds the size limit"
+    },
+    "chatErrorPersistenceFailed": "Couldn't save your message. Please try again.",
+    "@chatErrorPersistenceFailed": {
+        "description": "Snackbar shown when persisting a message (or creating a conversation) fails"
+    },
+    "drawerNewChat": "New chat",
+    "@drawerNewChat": {
+        "description": "Label for the conversations drawer's CTA that starts a new conversation"
+    },
+    "drawerEmpty": "No conversations yet. Start one from the composer.",
+    "@drawerEmpty": {
+        "description": "Empty-state message shown in the conversations drawer when no conversations exist"
+    },
+    "drawerSectionConversations": "Conversations",
+    "@drawerSectionConversations": {
+        "description": "Section header above the conversations list inside the drawer"
     }
 }

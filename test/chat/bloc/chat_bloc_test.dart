@@ -1,157 +1,166 @@
 import 'dart:async';
 
 import 'package:ask_ai_app/chat/bloc/chat_bloc.dart';
-import 'package:ask_ai_app/chat/model/message.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:chat_client/chat_client.dart';
+import 'package:chat_repository/chat_repository.dart';
+import 'package:conversations_repository/conversations_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../helpers/helpers.dart';
 
 void main() {
+  setUpAll(() {
+    registerFallbackValue(MessageRole.user);
+  });
+
   group(ChatBloc, () {
+    const conversationId = 'c0';
+
+    late MockConversationsRepository conversationsRepository;
     late MockChatRepository chatRepository;
-    late StreamController<String> incoming;
+    late StreamController<List<Message>> messagesController;
+    Future<ChatRepository> Function(String) chatRepositoryProvider =
+        (_) async => throw UnimplementedError();
+
+    Message buildMessage({
+      String id = 'm0',
+      MessageRole role = MessageRole.user,
+      String text = 'hi',
+    }) {
+      return Message(
+        id: id,
+        conversationId: conversationId,
+        role: role,
+        text: text,
+        sentAt: DateTime.utc(2026, 4, 27),
+      );
+    }
 
     setUp(() {
+      conversationsRepository = MockConversationsRepository();
       chatRepository = MockChatRepository();
-      incoming = StreamController<String>.broadcast();
-      when(() => chatRepository.incomingMessages).thenAnswer(
-        (_) => incoming.stream,
+      messagesController = StreamController<List<Message>>.broadcast();
+
+      when(
+        () => conversationsRepository.watchMessages(any()),
+      ).thenAnswer((_) => messagesController.stream);
+      when(
+        () => conversationsRepository.appendMessage(
+          conversationId: any(named: 'conversationId'),
+          role: any(named: 'role'),
+          text: any(named: 'text'),
+        ),
+      ).thenAnswer(
+        (invocation) async => buildMessage(
+          role: invocation.namedArguments[#role] as MessageRole,
+          text: invocation.namedArguments[#text] as String,
+        ),
       );
-      when(chatRepository.connect).thenAnswer((_) async {});
-      when(chatRepository.disconnect).thenAnswer((_) async {});
       when(() => chatRepository.send(any())).thenAnswer((_) async {});
+      chatRepositoryProvider = (_) async => chatRepository;
     });
 
     tearDown(() async {
-      await incoming.close();
+      await messagesController.close();
     });
 
-    Future<void> waitForReady(ChatBloc bloc) => bloc.stream.firstWhere(
-          (s) => s.status == ChatStatus.ready,
-        );
+    ChatBloc buildBloc() => ChatBloc(
+      conversationId: conversationId,
+      conversationsRepository: conversationsRepository,
+      chatRepositoryProvider: (id) => chatRepositoryProvider(id),
+    );
 
-    ChatBloc buildBloc() =>
-        ChatBloc(chatRepository: chatRepository)..add(ChatStarted());
-
-    test('initial state has status initial and no messages', () {
-      expect(
-        ChatBloc(chatRepository: chatRepository).state,
-        ChatState(),
-      );
+    test('initial state is empty with no transient error', () {
+      expect(buildBloc().state, ChatState());
     });
 
-    group(ChatStarted, () {
-      blocTest<ChatBloc, ChatState>(
-        'transitions connecting → ready when connect succeeds',
-        build: buildBloc,
-        expect: () => [
-          ChatState(status: ChatStatus.connecting),
-          ChatState(status: ChatStatus.ready),
-        ],
-        verify: (_) {
-          verify(chatRepository.connect).called(1);
-        },
-      );
-
-      blocTest<ChatBloc, ChatState>(
-        'transitions to error with connectionFailed when connect throws',
-        setUp: () {
-          when(chatRepository.connect).thenThrow(ConnectException('boom'));
-        },
-        build: buildBloc,
-        expect: () => [
-          ChatState(status: ChatStatus.connecting),
-          ChatState(
-            status: ChatStatus.error,
-            transientError: ChatTransientError.connectionFailed,
-          ),
-        ],
-      );
+    test('subscribes to watchMessages with the conversation id', () {
+      buildBloc();
+      verify(() => conversationsRepository.watchMessages(conversationId))
+          .called(1);
     });
 
-    group('incoming messages', () {
+    group(ChatMessagesUpdated, () {
       blocTest<ChatBloc, ChatState>(
-        'appends an assistant message and sets streamingMessageId',
+        'updates state when watchMessages emits',
         build: buildBloc,
-        act: (bloc) async {
-          await waitForReady(bloc);
-          incoming.add('hello');
-        },
-        wait: Duration(milliseconds: 20),
+        act: (_) => messagesController.add([buildMessage()]),
         expect: () => [
-          ChatState(status: ChatStatus.connecting),
-          ChatState(status: ChatStatus.ready),
-          ChatState(
-            status: ChatStatus.ready,
-            messages: const [
-              Message(id: '0', role: MessageRole.assistant, text: 'hello'),
-            ],
-            streamingMessageId: '0',
-          ),
+          ChatState(messages: [buildMessage()]),
         ],
       );
     });
 
     group(ChatMessageSubmitted, () {
       blocTest<ChatBloc, ChatState>(
-        'appends the user message and marks awaitingResponse',
+        'is a no-op when text is blank',
         build: buildBloc,
-        act: (bloc) async {
-          await waitForReady(bloc);
-          bloc.add(ChatMessageSubmitted('  hi  '));
-        },
-        expect: () => [
-          ChatState(status: ChatStatus.connecting),
-          ChatState(status: ChatStatus.ready),
-          ChatState(
-            status: ChatStatus.ready,
-            messages: const [
-              Message(id: '0', role: MessageRole.user, text: 'hi'),
-            ],
-            awaitingResponse: true,
-          ),
-        ],
+        act: (bloc) => bloc.add(ChatMessageSubmitted('   ')),
+        expect: () => <ChatState>[],
         verify: (_) {
+          verifyNever(
+            () => conversationsRepository.appendMessage(
+              conversationId: any(named: 'conversationId'),
+              role: any(named: 'role'),
+              text: any(named: 'text'),
+            ),
+          );
+        },
+      );
+
+      blocTest<ChatBloc, ChatState>(
+        'is a no-op while awaitingResponse is true',
+        build: buildBloc,
+        seed: () => ChatState(
+          messages: [buildMessage()],
+        ),
+        act: (bloc) => bloc.add(ChatMessageSubmitted('hi')),
+        expect: () => <ChatState>[],
+        verify: (_) {
+          verifyNever(
+            () => conversationsRepository.appendMessage(
+              conversationId: any(named: 'conversationId'),
+              role: any(named: 'role'),
+              text: any(named: 'text'),
+            ),
+          );
+        },
+      );
+
+      blocTest<ChatBloc, ChatState>(
+        'persists the trimmed user message and forwards it to the repository',
+        build: buildBloc,
+        act: (bloc) => bloc.add(ChatMessageSubmitted('  hi  ')),
+        expect: () => <ChatState>[],
+        verify: (_) {
+          verify(
+            () => conversationsRepository.appendMessage(
+              conversationId: conversationId,
+              role: MessageRole.user,
+              text: 'hi',
+            ),
+          ).called(1);
           verify(() => chatRepository.send('hi')).called(1);
         },
       );
 
       blocTest<ChatBloc, ChatState>(
-        'is a no-op when text is blank',
-        build: buildBloc,
-        act: (bloc) async {
-          await waitForReady(bloc);
-          bloc.add(ChatMessageSubmitted('   '));
-        },
-        expect: () => [
-          ChatState(status: ChatStatus.connecting),
-          ChatState(status: ChatStatus.ready),
-        ],
-        verify: (_) {
-          verifyNever(() => chatRepository.send(any()));
-        },
-      );
-
-      blocTest<ChatBloc, ChatState>(
-        'is a no-op while not in a sendable state',
+        'emits persistenceFailed when appendMessage throws',
         setUp: () {
-          when(chatRepository.connect).thenThrow(ConnectException('boom'));
+          when(
+            () => conversationsRepository.appendMessage(
+              conversationId: any(named: 'conversationId'),
+              role: any(named: 'role'),
+              text: any(named: 'text'),
+            ),
+          ).thenThrow(StateError('drift exploded'));
         },
         build: buildBloc,
-        act: (bloc) async {
-          await bloc.stream
-              .firstWhere((state) => state.status == ChatStatus.error);
-          bloc.add(ChatMessageSubmitted('hi'));
-        },
+        act: (bloc) => bloc.add(ChatMessageSubmitted('hi')),
         expect: () => [
-          ChatState(status: ChatStatus.connecting),
-          ChatState(
-            status: ChatStatus.error,
-            transientError: ChatTransientError.connectionFailed,
-          ),
+          ChatState(transientError: ChatTransientError.persistenceFailed),
         ],
         verify: (_) {
           verifyNever(() => chatRepository.send(any()));
@@ -159,154 +168,72 @@ void main() {
       );
 
       blocTest<ChatBloc, ChatState>(
-        'surfaces messageTooLarge when send rejects oversized payloads',
+        'emits connectionFailed when the repository provider rejects',
+        setUp: () {
+          chatRepositoryProvider = (_) async => throw ConnectException('boom');
+        },
+        build: buildBloc,
+        act: (bloc) => bloc.add(ChatMessageSubmitted('hi')),
+        expect: () => [
+          ChatState(transientError: ChatTransientError.connectionFailed),
+        ],
+        verify: (_) {
+          verifyNever(() => chatRepository.send(any()));
+        },
+      );
+
+      blocTest<ChatBloc, ChatState>(
+        'emits messageTooLarge when send rejects oversized payloads',
         setUp: () {
           when(() => chatRepository.send(any())).thenThrow(
             MessageTooLargeException('too large'),
           );
         },
         build: buildBloc,
-        act: (bloc) async {
-          await waitForReady(bloc);
-          bloc.add(ChatMessageSubmitted('hi'));
-        },
+        act: (bloc) => bloc.add(ChatMessageSubmitted('hi')),
         expect: () => [
-          ChatState(status: ChatStatus.connecting),
-          ChatState(status: ChatStatus.ready),
-          ChatState(
-            status: ChatStatus.ready,
-            messages: const [
-              Message(id: '0', role: MessageRole.user, text: 'hi'),
-            ],
-            awaitingResponse: true,
-          ),
-          ChatState(
-            status: ChatStatus.ready,
-            messages: const [
-              Message(id: '0', role: MessageRole.user, text: 'hi'),
-            ],
-            transientError: ChatTransientError.messageTooLarge,
-          ),
+          ChatState(transientError: ChatTransientError.messageTooLarge),
         ],
       );
 
       blocTest<ChatBloc, ChatState>(
-        'surfaces sendFailed for other transport errors',
+        'emits sendFailed for other transport errors',
         setUp: () {
           when(() => chatRepository.send(any()))
               .thenThrow(SendException('not connected'));
         },
         build: buildBloc,
-        act: (bloc) async {
-          await waitForReady(bloc);
-          bloc.add(ChatMessageSubmitted('hi'));
-        },
+        act: (bloc) => bloc.add(ChatMessageSubmitted('hi')),
         expect: () => [
-          ChatState(status: ChatStatus.connecting),
-          ChatState(status: ChatStatus.ready),
-          ChatState(
-            status: ChatStatus.ready,
-            messages: const [
-              Message(id: '0', role: MessageRole.user, text: 'hi'),
-            ],
-            awaitingResponse: true,
-          ),
-          ChatState(
-            status: ChatStatus.ready,
-            messages: const [
-              Message(id: '0', role: MessageRole.user, text: 'hi'),
-            ],
-            transientError: ChatTransientError.sendFailed,
-          ),
+          ChatState(transientError: ChatTransientError.sendFailed),
         ],
       );
 
       blocTest<ChatBloc, ChatState>(
-        'clears a previous transientError on a fresh send',
-        setUp: () {
-          var calls = 0;
-          when(() => chatRepository.send(any())).thenAnswer((_) async {
-            if (calls++ == 0) throw SendException('first');
-          });
-        },
+        'clears a previous transient error after successful persistence',
         build: buildBloc,
-        act: (bloc) async {
-          await waitForReady(bloc);
-          bloc.add(ChatMessageSubmitted('first'));
-          await bloc.stream.firstWhere(
-            (state) => state.transientError == ChatTransientError.sendFailed,
-          );
-          bloc.add(ChatMessageSubmitted('second'));
-        },
-        skip: 4,
-        expect: () => [
-          ChatState(
-            status: ChatStatus.ready,
-            messages: const [
-              Message(id: '0', role: MessageRole.user, text: 'first'),
-              Message(id: '1', role: MessageRole.user, text: 'second'),
-            ],
-            awaitingResponse: true,
-          ),
-        ],
+        seed: () => ChatState(transientError: ChatTransientError.sendFailed),
+        act: (bloc) => bloc.add(ChatMessageSubmitted('hi')),
+        expect: () => [ChatState()],
       );
     });
 
-    group(ChatStreamingCompleted, () {
+    group(ChatTransientErrorCleared, () {
       blocTest<ChatBloc, ChatState>(
-        'clears streamingMessageId when ids match',
+        'clears the transient error',
         build: buildBloc,
-        act: (bloc) async {
-          await waitForReady(bloc);
-          incoming.add('hello');
-          await bloc.stream
-              .firstWhere((state) => state.streamingMessageId == '0');
-          bloc.add(ChatStreamingCompleted('0'));
-        },
-        skip: 3,
-        expect: () => [
-          ChatState(
-            status: ChatStatus.ready,
-            messages: const [
-              Message(id: '0', role: MessageRole.assistant, text: 'hello'),
-            ],
-          ),
-        ],
-      );
-
-      blocTest<ChatBloc, ChatState>(
-        'is a no-op when ids do not match',
-        build: buildBloc,
-        act: (bloc) async {
-          await waitForReady(bloc);
-          incoming.add('hello');
-          await bloc.stream.firstWhere(
-            (state) => state.streamingMessageId == '0',
-          );
-          bloc.add(ChatStreamingCompleted('other'));
-        },
-        expect: () => [
-          ChatState(status: ChatStatus.connecting),
-          ChatState(status: ChatStatus.ready),
-          ChatState(
-            status: ChatStatus.ready,
-            messages: const [
-              Message(id: '0', role: MessageRole.assistant, text: 'hello'),
-            ],
-            streamingMessageId: '0',
-          ),
-        ],
+        seed: () => ChatState(transientError: ChatTransientError.sendFailed),
+        act: (bloc) => bloc.add(ChatTransientErrorCleared()),
+        expect: () => [ChatState()],
       );
     });
 
     group('close', () {
-      test('cancels the incoming subscription and disconnects', () async {
+      test('cancels the messages subscription', () async {
         final bloc = buildBloc();
-        await waitForReady(bloc);
         await bloc.close();
-        verify(chatRepository.disconnect).called(1);
+        expect(messagesController.hasListener, isFalse);
       });
     });
-
   });
 }

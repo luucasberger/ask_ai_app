@@ -1,0 +1,16 @@
+name: conversations_repository
+description: Repository that bridges a ConversationsClient to AskAI feature blocs.
+version: 0.1.0+1
+publish_to: none
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  conversations_client:
+    path: ../conversations_client/conversations_client
+
+dev_dependencies:
+  mocktail: ^1.0.5
+  test: ^1.31.0
+  very_good_analysis: ^10.2.0

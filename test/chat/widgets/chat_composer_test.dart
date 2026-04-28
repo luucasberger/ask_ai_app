@@ -1,189 +1,110 @@
-import 'package:ask_ai_app/chat/bloc/chat_bloc.dart';
 import 'package:ask_ai_app/chat/widgets/chat_composer.dart';
 import 'package:ask_ai_app/l10n/l10n.dart';
-import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mocktail/mocktail.dart';
 
 import '../../helpers/helpers.dart';
 
-class _MockChatBloc extends MockBloc<ChatEvent, ChatState>
-    implements ChatBloc {}
-
 void main() {
-  setUpAll(() {
-    registerFallbackValue(ChatStarted());
-  });
-
-  late _MockChatBloc bloc;
-
-  setUp(() {
-    bloc = _MockChatBloc();
-  });
-
-  Future<void> pumpComposer(WidgetTester tester) {
-    return tester.pumpApp(
-      BlocProvider<ChatBloc>.value(
-        value: bloc,
-        child: Scaffold(body: ChatComposer()),
-      ),
-    );
-  }
-
   group(ChatComposer, () {
-    testWidgets('disables the text field while connecting', (tester) async {
-      when(() => bloc.state).thenReturn(
-        ChatState(status: ChatStatus.connecting),
+    Future<void> pumpComposer(
+      WidgetTester tester, {
+      required ValueChanged<String> onSubmit,
+      bool inFlight = false,
+    }) {
+      return tester.pumpApp(
+        Scaffold(
+          body: ChatComposer(onSubmit: onSubmit, inFlight: inFlight),
+        ),
       );
+    }
 
-      await pumpComposer(tester);
+    testWidgets('fires onSubmit with the typed text on send tap', (
+      tester,
+    ) async {
+      final submitted = <String>[];
+      await pumpComposer(tester, onSubmit: submitted.add);
 
-      final field = tester.widget<TextField>(find.byType(TextField));
-      expect(field.enabled, isFalse);
-    });
-
-    testWidgets('enables the text field when ready', (tester) async {
-      when(() => bloc.state).thenReturn(
-        ChatState(status: ChatStatus.ready),
-      );
-
-      await pumpComposer(tester);
-
-      final field = tester.widget<TextField>(find.byType(TextField));
-      expect(field.enabled, isTrue);
-    });
-
-    testWidgets('dispatches $ChatMessageSubmitted on tap', (tester) async {
-      when(() => bloc.state).thenReturn(
-        ChatState(status: ChatStatus.ready),
-      );
-
-      await pumpComposer(tester);
       await tester.enterText(find.byType(TextField), 'hello');
       await tester.tap(find.byType(IconButton));
       await tester.pump();
 
-      verify(() => bloc.add(ChatMessageSubmitted('hello'))).called(1);
+      expect(submitted, ['hello']);
       expect(
         tester.widget<TextField>(find.byType(TextField)).controller!.text,
         isEmpty,
       );
     });
 
-    testWidgets(
-      'dispatches $ChatMessageSubmitted on the keyboard send action',
-      (tester) async {
-        when(() => bloc.state).thenReturn(
-          ChatState(status: ChatStatus.ready),
-        );
+    testWidgets('fires onSubmit on the keyboard send action', (tester) async {
+      final submitted = <String>[];
+      await pumpComposer(tester, onSubmit: submitted.add);
 
-        await pumpComposer(tester);
-        await tester.enterText(find.byType(TextField), 'via keyboard');
-        await tester.testTextInput.receiveAction(TextInputAction.send);
-        await tester.pump();
+      await tester.enterText(find.byType(TextField), 'via keyboard');
+      await tester.testTextInput.receiveAction(TextInputAction.send);
+      await tester.pump();
 
-        verify(
-          () => bloc.add(ChatMessageSubmitted('via keyboard')),
-        ).called(1);
-      },
-    );
+      expect(submitted, ['via keyboard']);
+    });
 
-    testWidgets(
-      'does not dispatch on the keyboard send action while a response '
-      'is in flight and preserves the typed text',
-      (tester) async {
-        when(() => bloc.state).thenReturn(
-          ChatState(
-            status: ChatStatus.ready,
-            awaitingResponse: true,
-          ),
-        );
+    testWidgets('does not fire onSubmit when text is blank', (tester) async {
+      var calls = 0;
+      await pumpComposer(tester, onSubmit: (_) => calls++);
 
-        await pumpComposer(tester);
-        await tester.enterText(find.byType(TextField), 'queued message');
-        await tester.testTextInput.receiveAction(TextInputAction.send);
-        await tester.pump();
-
-        verifyNever(() => bloc.add(any(that: isA<ChatMessageSubmitted>())));
-        expect(
-          tester.widget<TextField>(find.byType(TextField)).controller!.text,
-          'queued message',
-        );
-      },
-    );
-
-    testWidgets('does not dispatch when text is blank', (tester) async {
-      when(() => bloc.state).thenReturn(
-        ChatState(status: ChatStatus.ready),
-      );
-
-      await pumpComposer(tester);
       await tester.enterText(find.byType(TextField), '   ');
       await tester.testTextInput.receiveAction(TextInputAction.send);
       await tester.pump();
 
-      verifyNever(() => bloc.add(any(that: isA<ChatMessageSubmitted>())));
+      expect(calls, 0);
     });
 
-    testWidgets(
-      'shows the in-flight indicator while a response is in flight',
-      (tester) async {
-        when(() => bloc.state).thenReturn(
-          ChatState(
-            status: ChatStatus.ready,
-            awaitingResponse: true,
-          ),
-        );
-
-        await pumpComposer(tester);
-
-        expect(find.byType(CircularProgressIndicator), findsOneWidget);
-        expect(find.byType(IconButton), findsNothing);
-      },
-    );
-
-    testWidgets('shows an enabled send icon when ready and idle', (
+    testWidgets('does not fire onSubmit while inFlight is true', (
       tester,
     ) async {
-      when(() => bloc.state).thenReturn(
-        ChatState(status: ChatStatus.ready),
+      var calls = 0;
+      await pumpComposer(
+        tester,
+        onSubmit: (_) => calls++,
+        inFlight: true,
       );
 
-      await pumpComposer(tester);
+      await tester.enterText(find.byType(TextField), 'queued');
+      await tester.testTextInput.receiveAction(TextInputAction.send);
+      await tester.pump();
+
+      expect(calls, 0);
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).controller!.text,
+        'queued',
+      );
+    });
+
+    testWidgets('shows the in-flight indicator and hides the icon button', (
+      tester,
+    ) async {
+      await pumpComposer(tester, onSubmit: (_) {}, inFlight: true);
+
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(find.byType(IconButton), findsNothing);
+    });
+
+    testWidgets('shows an enabled send icon when idle', (tester) async {
+      await pumpComposer(tester, onSubmit: (_) {});
 
       final iconButton = tester.widget<IconButton>(find.byType(IconButton));
       expect(iconButton.onPressed, isNotNull);
-    });
-
-    testWidgets('disables the send icon while not ready', (tester) async {
-      when(() => bloc.state).thenReturn(
-        ChatState(status: ChatStatus.connecting),
-      );
-
-      await pumpComposer(tester);
-
-      final iconButton = tester.widget<IconButton>(find.byType(IconButton));
-      expect(iconButton.onPressed, isNull);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
     });
 
     testWidgets('localizes the composer hint', (tester) async {
-      when(() => bloc.state).thenReturn(
-        ChatState(status: ChatStatus.ready),
-      );
-
       late final BuildContext capturedContext;
       await tester.pumpApp(
-        BlocProvider<ChatBloc>.value(
-          value: bloc,
-          child: Scaffold(
-            body: Builder(
-              builder: (context) {
-                capturedContext = context;
-                return ChatComposer();
-              },
-            ),
+        Scaffold(
+          body: Builder(
+            builder: (context) {
+              capturedContext = context;
+              return ChatComposer(onSubmit: (_) {}, inFlight: false);
+            },
           ),
         ),
       );

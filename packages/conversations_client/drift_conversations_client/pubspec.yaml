@@ -1,0 +1,21 @@
+name: drift_conversations_client
+description: Drift-backed implementation of ConversationsClient for AskAI.
+version: 0.1.0+1
+publish_to: none
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  conversations_client:
+    path: ../conversations_client
+  drift: ^2.20.0
+  meta: ^1.16.0
+  uuid: ^4.5.0
+
+dev_dependencies:
+  build_runner: ^2.4.13
+  drift_dev: ^2.20.0
+  sqlite3: ^2.4.7
+  test: ^1.31.0
+  very_good_analysis: ^10.2.0

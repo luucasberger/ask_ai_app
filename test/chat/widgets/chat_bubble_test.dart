@@ -1,12 +1,26 @@
 import 'package:app_ui/app_ui.dart';
-import 'package:ask_ai_app/chat/model/message.dart';
 import 'package:ask_ai_app/chat/widgets/chat_bubble.dart';
 import 'package:ask_ai_app/chat/widgets/typewriter_text.dart';
+import 'package:conversations_repository/conversations_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../helpers/helpers.dart';
 
 void main() {
+  Message buildMessage({
+    String id = 'm0',
+    MessageRole role = MessageRole.user,
+    String text = 'hi',
+  }) {
+    return Message(
+      id: id,
+      conversationId: 'c0',
+      role: role,
+      text: text,
+      sentAt: DateTime.utc(2026, 4, 27),
+    );
+  }
+
   group(ChatBubble, () {
     testWidgets('renders user message right-aligned with userBubble color', (
       tester,
@@ -16,11 +30,7 @@ void main() {
           builder: (context) {
             final colors = context.appColors;
             return ChatBubble(
-              message: Message(
-                id: '1',
-                role: MessageRole.user,
-                text: 'hello',
-              ),
+              message: buildMessage(id: '1', text: 'hello'),
               streaming: false,
               onStreamingCompleted: () {},
               key: ValueKey('user-bubble-${colors.userBubble.toARGB32()}'),
@@ -41,7 +51,7 @@ void main() {
       (tester) async {
         await tester.pumpApp(
           ChatBubble(
-            message: Message(
+            message: buildMessage(
               id: '2',
               role: MessageRole.assistant,
               text: 'hi back',
@@ -66,7 +76,7 @@ void main() {
       var completedCount = 0;
       await tester.pumpApp(
         ChatBubble(
-          message: Message(
+          message: buildMessage(
             id: '3',
             role: MessageRole.assistant,
             text: 'streaming',
@@ -88,7 +98,7 @@ void main() {
     testWidgets('renders plain Text when not streaming', (tester) async {
       await tester.pumpApp(
         ChatBubble(
-          message: Message(
+          message: buildMessage(
             id: '4',
             role: MessageRole.assistant,
             text: 'static',

@@ -1,28 +1,19 @@
 part of 'chat_bloc.dart';
 
-enum ChatStatus {
-  /// The bloc has been created but has not yet attempted to connect.
-  initial,
-
-  /// Connecting to the chat backend.
-  connecting,
-
-  /// Connected and ready to send/receive messages.
-  ready,
-
-  /// The connection attempt failed.
-  error,
-}
-
-/// Categories of one-shot errors surfaced from [ChatBloc] for UI to display.
+/// Categories of one-shot errors surfaced from [ChatBloc] for the
+/// view to display.
 enum ChatTransientError {
-  /// Connecting to the chat backend failed.
+  /// Persisting the user's message into local storage failed.
+  persistenceFailed,
+
+  /// Obtaining the conversation's [ChatRepository] failed because the
+  /// underlying transport could not connect.
   connectionFailed,
 
-  /// Sending a message failed for an unspecified reason.
+  /// Sending a message failed for an unspecified transport reason.
   sendFailed,
 
-  /// The user attempted to send a message exceeding the size limit.
+  /// The user attempted to send a message that exceeded the size limit.
   messageTooLarge,
 }
 
@@ -31,64 +22,35 @@ enum ChatTransientError {
 /// {@endtemplate}
 final class ChatState extends Equatable {
   /// {@macro chat_state}
-  const ChatState({
-    this.status = ChatStatus.initial,
-    this.messages = const [],
-    this.awaitingResponse = false,
-    this.streamingMessageId,
-    this.transientError,
-  });
+  const ChatState({this.messages = const [], this.transientError});
 
-  /// Current connection status.
-  final ChatStatus status;
-
-  /// Messages exchanged in the conversation, ordered oldest → newest.
+  /// Messages exchanged in the conversation, ordered oldest → newest,
+  /// as observed from [ConversationsRepository.watchMessages].
   final List<Message> messages;
 
-  /// `true` between the moment the user submits a message and the moment the
-  /// echoed assistant reply arrives from the backend.
-  final bool awaitingResponse;
-
-  /// Identifier of the assistant message currently being revealed by the
-  /// typewriter, or `null` once the reveal completes.
-  final String? streamingMessageId;
-
-  /// A transient error to surface (e.g. via snackbar). Cleared once observed.
+  /// A transient error to surface to the user (e.g. via snackbar).
+  /// Cleared by the view via [ChatTransientErrorCleared] once observed.
   final ChatTransientError? transientError;
 
-  /// Whether the composer should display its in-flight indicator.
-  bool get isResponseInFlight => awaitingResponse || streamingMessageId != null;
-
-  /// Whether the composer is enabled for new submissions.
-  bool get canSend => status == ChatStatus.ready && !isResponseInFlight;
+  /// Whether the conversation is currently waiting for an assistant
+  /// echo. Derived structurally from [messages]: the conversation is
+  /// awaiting iff the last message was authored by the user.
+  bool get awaitingResponse =>
+      messages.isNotEmpty && messages.last.role == MessageRole.user;
 
   ChatState copyWith({
-    ChatStatus? status,
     List<Message>? messages,
-    bool? awaitingResponse,
-    String? streamingMessageId,
     ChatTransientError? transientError,
-    bool clearStreamingMessageId = false,
     bool clearTransientError = false,
   }) {
     return ChatState(
-      status: status ?? this.status,
       messages: messages ?? this.messages,
-      awaitingResponse: awaitingResponse ?? this.awaitingResponse,
-      streamingMessageId: clearStreamingMessageId
+      transientError: clearTransientError
           ? null
-          : streamingMessageId ?? this.streamingMessageId,
-      transientError:
-          clearTransientError ? null : transientError ?? this.transientError,
+          : transientError ?? this.transientError,
     );
   }
 
   @override
-  List<Object?> get props => [
-        status,
-        messages,
-        awaitingResponse,
-        streamingMessageId,
-        transientError,
-      ];
+  List<Object?> get props => [messages, transientError];
 }

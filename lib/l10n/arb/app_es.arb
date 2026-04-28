@@ -35,5 +35,21 @@
     "chatErrorMessageTooLarge": "El mensaje es demasiado largo.",
     "@chatErrorMessageTooLarge": {
         "description": "Snackbar mostrado cuando el usuario intenta enviar un mensaje que excede el límite de tamaño"
+    },
+    "chatErrorPersistenceFailed": "No se pudo guardar tu mensaje. Inténtalo de nuevo.",
+    "@chatErrorPersistenceFailed": {
+        "description": "Snackbar mostrado cuando falla la persistencia de un mensaje (o la creación de una conversación)"
+    },
+    "drawerNewChat": "Nuevo chat",
+    "@drawerNewChat": {
+        "description": "Etiqueta para el botón del cajón de conversaciones que inicia una nueva conversación"
+    },
+    "drawerEmpty": "Aún no hay conversaciones. Inicia una desde el compositor.",
+    "@drawerEmpty": {
+        "description": "Mensaje de estado vacío mostrado en el cajón de conversaciones cuando no existen conversaciones"
+    },
+    "drawerSectionConversations": "Conversaciones",
+    "@drawerSectionConversations": {
+        "description": "Encabezado de sección sobre la lista de conversaciones dentro del cajón"
     }
 }

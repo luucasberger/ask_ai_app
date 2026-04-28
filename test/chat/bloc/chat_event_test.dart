@@ -1,10 +1,27 @@
 import 'package:ask_ai_app/chat/bloc/chat_bloc.dart';
+import 'package:conversations_repository/conversations_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  group(ChatStarted, () {
+  group(ChatMessagesUpdated, () {
+    final a = Message(
+      id: '0',
+      conversationId: 'c',
+      role: MessageRole.user,
+      text: 'hi',
+      sentAt: DateTime.utc(2026, 4, 27),
+    );
+    final b = Message(
+      id: '1',
+      conversationId: 'c',
+      role: MessageRole.assistant,
+      text: 'hi',
+      sentAt: DateTime.utc(2026, 4, 27),
+    );
+
     test('supports value equality', () {
-      expect(ChatStarted(), equals(ChatStarted()));
+      expect(ChatMessagesUpdated([a]), equals(ChatMessagesUpdated([a])));
+      expect(ChatMessagesUpdated([a]), isNot(equals(ChatMessagesUpdated([b]))));
     });
   });
 
@@ -18,25 +35,11 @@ void main() {
     });
   });
 
-  group(ChatBackendMessageReceived, () {
+  group(ChatTransientErrorCleared, () {
     test('supports value equality', () {
       expect(
-        ChatBackendMessageReceived('a'),
-        equals(ChatBackendMessageReceived('a')),
-      );
-      expect(
-        ChatBackendMessageReceived('a'),
-        isNot(equals(ChatBackendMessageReceived('b'))),
-      );
-    });
-  });
-
-  group(ChatStreamingCompleted, () {
-    test('supports value equality', () {
-      expect(ChatStreamingCompleted('1'), equals(ChatStreamingCompleted('1')));
-      expect(
-        ChatStreamingCompleted('1'),
-        isNot(equals(ChatStreamingCompleted('2'))),
+        ChatTransientErrorCleared(),
+        equals(ChatTransientErrorCleared()),
       );
     });
   });

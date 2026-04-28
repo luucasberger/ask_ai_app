@@ -1,6 +1,6 @@
 import 'package:app_ui/app_ui.dart';
-import 'package:ask_ai_app/chat/model/message.dart';
 import 'package:ask_ai_app/chat/widgets/typewriter_text.dart';
+import 'package:conversations_repository/conversations_repository.dart';
 
 /// {@template chat_bubble}
 /// Visual container for a single [Message].
