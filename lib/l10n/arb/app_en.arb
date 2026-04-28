@@ -51,5 +51,53 @@
     "drawerSectionConversations": "Conversations",
     "@drawerSectionConversations": {
         "description": "Section header above the conversations list inside the drawer"
+    },
+    "conversationMenuRename": "Rename",
+    "@conversationMenuRename": {
+        "description": "Label for the Rename action in the conversation row's long-press context menu"
+    },
+    "conversationMenuDelete": "Delete",
+    "@conversationMenuDelete": {
+        "description": "Label for the Delete action in the conversation row's long-press context menu"
+    },
+    "renameConversationDialogTitle": "Rename conversation",
+    "@renameConversationDialogTitle": {
+        "description": "Title of the dialog shown when the user picks Rename from the conversation context menu"
+    },
+    "renameConversationDialogHint": "Conversation name",
+    "@renameConversationDialogHint": {
+        "description": "Placeholder text for the rename dialog's text field"
+    },
+    "renameConversationDialogCancel": "Cancel",
+    "@renameConversationDialogCancel": {
+        "description": "Cancel action in the rename conversation dialog"
+    },
+    "renameConversationDialogSave": "Save",
+    "@renameConversationDialogSave": {
+        "description": "Save action in the rename conversation dialog"
+    },
+    "deleteConversationDialogTitle": "Delete conversation?",
+    "@deleteConversationDialogTitle": {
+        "description": "Title of the dialog shown when the user picks Delete from the conversation context menu"
+    },
+    "deleteConversationDialogBody": "This conversation will be permanently deleted.",
+    "@deleteConversationDialogBody": {
+        "description": "Body copy of the delete conversation confirmation dialog"
+    },
+    "deleteConversationDialogCancel": "Cancel",
+    "@deleteConversationDialogCancel": {
+        "description": "Cancel action in the delete conversation confirmation dialog"
+    },
+    "deleteConversationDialogConfirm": "Delete",
+    "@deleteConversationDialogConfirm": {
+        "description": "Confirm action in the delete conversation confirmation dialog"
+    },
+    "conversationErrorRenameFailed": "Couldn't rename conversation. Please try again.",
+    "@conversationErrorRenameFailed": {
+        "description": "Snackbar shown when renaming a conversation fails"
+    },
+    "conversationErrorDeleteFailed": "Couldn't delete conversation. Please try again.",
+    "@conversationErrorDeleteFailed": {
+        "description": "Snackbar shown when deleting a conversation fails"
     }
 }

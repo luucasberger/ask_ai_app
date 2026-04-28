@@ -41,6 +41,7 @@ class AppBloc extends Bloc<AppEvent, AppState> {
     on<AppStarted>(_onStarted);
     on<AppConversationActivated>(_onConversationActivated);
     on<AppNewConversationRequested>(_onNewConversationRequested);
+    on<AppConversationDeleted>(_onConversationDeleted);
     on<AppFirstMessageSubmitted>(_onFirstMessageSubmitted);
     on<AppEchoReceived>(_onEchoReceived);
     on<AppStreamingCompleted>(_onStreamingCompleted);
@@ -97,6 +98,31 @@ class AppBloc extends Bloc<AppEvent, AppState> {
     await _conversationsRepository.writeMetadata(
       key: lastActiveConversationKey,
     );
+  }
+
+  Future<void> _onConversationDeleted(
+    AppConversationDeleted event,
+    Emitter<AppState> emit,
+  ) async {
+    final id = event.conversationId;
+    try {
+      await _conversationsRepository.deleteConversation(id);
+    } on Object {
+      emit(state.copyWith(transientError: AppTransientError.deleteFailed));
+      return;
+    }
+    await _chatRepositoryRegistry.dispose(id);
+    if (state.activeConversationId == id) {
+      emit(
+        state.copyWith(
+          clearActiveConversationId: true,
+          clearStreamingMessageId: true,
+        ),
+      );
+      await _conversationsRepository.writeMetadata(
+        key: lastActiveConversationKey,
+      );
+    }
   }
 
   Future<void> _onFirstMessageSubmitted(

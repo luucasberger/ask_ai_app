@@ -1,5 +1,6 @@
 import 'package:app_ui/app_ui.dart';
 import 'package:ask_ai_app/conversations/widgets/conversation_tile.dart';
+import 'package:ask_ai_app/l10n/l10n.dart';
 import 'package:conversations_repository/conversations_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -18,16 +19,32 @@ void main() {
     );
   }
 
+  Future<void> pumpTile(
+    WidgetTester tester, {
+    Conversation? conversation,
+    bool selected = false,
+    VoidCallback? onTap,
+    VoidCallback? onRenameSelected,
+    VoidCallback? onDeleteSelected,
+  }) {
+    return tester.pumpApp(
+      Scaffold(
+        body: ConversationTile(
+          conversation: conversation ?? buildConversation(),
+          selected: selected,
+          onTap: onTap ?? () {},
+          onRenameSelected: onRenameSelected ?? () {},
+          onDeleteSelected: onDeleteSelected ?? () {},
+        ),
+      ),
+    );
+  }
+
   group(ConversationTile, () {
     testWidgets('renders the conversation title', (tester) async {
-      await tester.pumpApp(
-        Scaffold(
-          body: ConversationTile(
-            conversation: buildConversation(title: 'Lunch plans'),
-            selected: false,
-            onTap: () {},
-          ),
-        ),
+      await pumpTile(
+        tester,
+        conversation: buildConversation(title: 'Lunch plans'),
       );
 
       expect(find.text('Lunch plans'), findsOneWidget);
@@ -35,15 +52,7 @@ void main() {
 
     testWidgets('fires onTap when tapped', (tester) async {
       var taps = 0;
-      await tester.pumpApp(
-        Scaffold(
-          body: ConversationTile(
-            conversation: buildConversation(),
-            selected: false,
-            onTap: () => taps++,
-          ),
-        ),
-      );
+      await pumpTile(tester, onTap: () => taps++);
 
       await tester.tap(find.byType(ConversationTile));
       await tester.pump();
@@ -52,18 +61,145 @@ void main() {
     });
 
     testWidgets('marks the underlying $ListTile as selected', (tester) async {
+      await pumpTile(tester, selected: true);
+
+      final tile = tester.widget<ListTile>(find.byType(ListTile));
+      expect(tile.selected, isTrue);
+    });
+
+    testWidgets(
+      'long-press opens a menu with localized Rename and Delete entries',
+      (tester) async {
+        late final BuildContext capturedContext;
+        await tester.pumpApp(
+          Scaffold(
+            body: Builder(
+              builder: (context) {
+                capturedContext = context;
+                return ConversationTile(
+                  conversation: buildConversation(),
+                  selected: false,
+                  onTap: () {},
+                  onRenameSelected: () {},
+                  onDeleteSelected: () {},
+                );
+              },
+            ),
+          ),
+        );
+
+        await tester.longPress(find.byType(ConversationTile));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text(capturedContext.l10n.conversationMenuRename),
+          findsOneWidget,
+        );
+        expect(
+          find.text(capturedContext.l10n.conversationMenuDelete),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets('fires onRenameSelected when the Rename entry is tapped', (
+      tester,
+    ) async {
+      var renames = 0;
+      late final BuildContext capturedContext;
       await tester.pumpApp(
         Scaffold(
-          body: ConversationTile(
-            conversation: buildConversation(),
-            selected: true,
-            onTap: () {},
+          body: Builder(
+            builder: (context) {
+              capturedContext = context;
+              return ConversationTile(
+                conversation: buildConversation(),
+                selected: false,
+                onTap: () {},
+                onRenameSelected: () => renames++,
+                onDeleteSelected: () {},
+              );
+            },
           ),
         ),
       );
 
-      final tile = tester.widget<ListTile>(find.byType(ListTile));
-      expect(tile.selected, isTrue);
+      await tester.longPress(find.byType(ConversationTile));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.text(capturedContext.l10n.conversationMenuRename),
+      );
+      await tester.pumpAndSettle();
+
+      expect(renames, 1);
+    });
+
+    testWidgets('fires onDeleteSelected when the Delete entry is tapped', (
+      tester,
+    ) async {
+      var deletes = 0;
+      late final BuildContext capturedContext;
+      await tester.pumpApp(
+        Scaffold(
+          body: Builder(
+            builder: (context) {
+              capturedContext = context;
+              return ConversationTile(
+                conversation: buildConversation(),
+                selected: false,
+                onTap: () {},
+                onRenameSelected: () {},
+                onDeleteSelected: () => deletes++,
+              );
+            },
+          ),
+        ),
+      );
+
+      await tester.longPress(find.byType(ConversationTile));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.text(capturedContext.l10n.conversationMenuDelete),
+      );
+      await tester.pumpAndSettle();
+
+      expect(deletes, 1);
+    });
+
+    testWidgets('long-pressing again while the menu is open closes it', (
+      tester,
+    ) async {
+      late final BuildContext capturedContext;
+      await tester.pumpApp(
+        Scaffold(
+          body: Builder(
+            builder: (context) {
+              capturedContext = context;
+              return ConversationTile(
+                conversation: buildConversation(),
+                selected: false,
+                onTap: () {},
+                onRenameSelected: () {},
+                onDeleteSelected: () {},
+              );
+            },
+          ),
+        ),
+      );
+
+      await tester.longPress(find.byType(ConversationTile));
+      await tester.pumpAndSettle();
+      expect(
+        find.text(capturedContext.l10n.conversationMenuRename),
+        findsOneWidget,
+      );
+
+      await tester.longPress(find.byType(ConversationTile));
+      await tester.pumpAndSettle();
+      expect(
+        find.text(capturedContext.l10n.conversationMenuRename),
+        findsNothing,
+      );
     });
   });
 }

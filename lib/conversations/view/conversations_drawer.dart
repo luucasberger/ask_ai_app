@@ -2,6 +2,7 @@ import 'package:app_ui/app_ui.dart';
 import 'package:ask_ai_app/conversations/cubit/conversations_cubit.dart';
 import 'package:ask_ai_app/conversations/widgets/widgets.dart';
 import 'package:ask_ai_app/l10n/l10n.dart';
+import 'package:conversations_repository/conversations_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 /// Provides a [ConversationsCubit] for the drawer surface and renders
@@ -12,6 +13,8 @@ class ConversationsDrawer extends StatelessWidget {
     required this.activeConversationId,
     required this.onConversationTapped,
     required this.onNewChatTapped,
+    required this.onRenameRequested,
+    required this.onDeleteRequested,
     super.key,
   });
 
@@ -31,6 +34,18 @@ class ConversationsDrawer extends StatelessWidget {
   /// {@endtemplate}
   final VoidCallback onNewChatTapped;
 
+  /// {@template conversations_drawer.onRenameRequested}
+  /// Invoked when the user picks **Rename** from the long-press
+  /// context menu of a conversation row.
+  /// {@endtemplate}
+  final ValueChanged<Conversation> onRenameRequested;
+
+  /// {@template conversations_drawer.onDeleteRequested}
+  /// Invoked when the user picks **Delete** from the long-press
+  /// context menu of a conversation row.
+  /// {@endtemplate}
+  final ValueChanged<Conversation> onDeleteRequested;
+
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
@@ -41,6 +56,8 @@ class ConversationsDrawer extends StatelessWidget {
         activeConversationId: activeConversationId,
         onConversationTapped: onConversationTapped,
         onNewChatTapped: onNewChatTapped,
+        onRenameRequested: onRenameRequested,
+        onDeleteRequested: onDeleteRequested,
       ),
     );
   }
@@ -56,6 +73,8 @@ class ConversationsDrawerView extends StatelessWidget {
     required this.activeConversationId,
     required this.onConversationTapped,
     required this.onNewChatTapped,
+    required this.onRenameRequested,
+    required this.onDeleteRequested,
     super.key,
   });
 
@@ -67,6 +86,12 @@ class ConversationsDrawerView extends StatelessWidget {
 
   /// {@macro conversations_drawer.onNewChatTapped}
   final VoidCallback onNewChatTapped;
+
+  /// {@macro conversations_drawer.onRenameRequested}
+  final ValueChanged<Conversation> onRenameRequested;
+
+  /// {@macro conversations_drawer.onDeleteRequested}
+  final ValueChanged<Conversation> onDeleteRequested;
 
   @override
   Widget build(BuildContext context) {
@@ -115,6 +140,8 @@ class ConversationsDrawerView extends StatelessWidget {
                         conversation: conversation,
                         selected: conversation.id == activeConversationId,
                         onTap: () => onConversationTapped(conversation.id),
+                        onRenameSelected: () => onRenameRequested(conversation),
+                        onDeleteSelected: () => onDeleteRequested(conversation),
                       );
                     },
                   );

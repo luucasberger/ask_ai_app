@@ -6,6 +6,7 @@ import 'package:ask_ai_app/chat/view/chat_page.dart';
 import 'package:ask_ai_app/chat/widgets/chat_bubble.dart';
 import 'package:ask_ai_app/chat/widgets/chat_composer.dart';
 import 'package:ask_ai_app/chat/widgets/typewriter_text.dart';
+import 'package:ask_ai_app/conversations/widgets/conversation_tile.dart';
 import 'package:ask_ai_app/l10n/l10n.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:chat_client/chat_client.dart';
@@ -21,6 +22,7 @@ void main() {
     registerFallbackValue(MessageRole.user);
     registerFallbackValue(const AppConversationActivated('_'));
     registerFallbackValue(const AppNewConversationRequested());
+    registerFallbackValue(const AppConversationDeleted('_'));
     registerFallbackValue(const AppFirstMessageSubmitted('_'));
     registerFallbackValue(const AppStreamingCompleted('_'));
     registerFallbackValue(const AppTransientErrorCleared());
@@ -451,6 +453,251 @@ void main() {
         ).called(1);
       },
     );
+
+    testWidgets(
+      'rename flow: saving the dialog calls renameConversation',
+      (tester) async {
+        when(conversationsRepository.watchConversations).thenAnswer(
+          (_) => Stream<List<Conversation>>.value([
+            buildConversation(id: 'c-1', title: 'Lunch plans'),
+          ]),
+        );
+        when(
+          () => conversationsRepository.renameConversation(
+            id: any(named: 'id'),
+            title: any(named: 'title'),
+          ),
+        ).thenAnswer((_) async {});
+        seedAppState(const AppState());
+
+        late final BuildContext capturedContext;
+        await tester.pumpApp(
+          Builder(
+            builder: (context) {
+              capturedContext = context;
+              return ChatPage();
+            },
+          ),
+          appBloc: appBloc,
+          conversationsRepository: conversationsRepository,
+          chatRepositoryRegistry: chatRepositoryRegistry,
+        );
+        await tester.pump();
+
+        await tester.tap(find.byTooltip('Open navigation menu'));
+        await tester.pumpAndSettle();
+        await tester.longPress(find.byType(ConversationTile));
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.text(capturedContext.l10n.conversationMenuRename),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.enterText(
+          find.byKey(const Key('renameConversationDialog_textField')),
+          'Updated title',
+        );
+        await tester.pump();
+        await tester.tap(
+          find.text(capturedContext.l10n.renameConversationDialogSave),
+        );
+        await tester.pumpAndSettle();
+
+        verify(
+          () => conversationsRepository.renameConversation(
+            id: 'c-1',
+            title: 'Updated title',
+          ),
+        ).called(1);
+      },
+    );
+
+    testWidgets(
+      'rename flow: cancelling the dialog does not call renameConversation',
+      (tester) async {
+        when(conversationsRepository.watchConversations).thenAnswer(
+          (_) => Stream<List<Conversation>>.value([
+            buildConversation(id: 'c-1', title: 'Lunch plans'),
+          ]),
+        );
+        seedAppState(const AppState());
+
+        late final BuildContext capturedContext;
+        await tester.pumpApp(
+          Builder(
+            builder: (context) {
+              capturedContext = context;
+              return ChatPage();
+            },
+          ),
+          appBloc: appBloc,
+          conversationsRepository: conversationsRepository,
+          chatRepositoryRegistry: chatRepositoryRegistry,
+        );
+        await tester.pump();
+
+        await tester.tap(find.byTooltip('Open navigation menu'));
+        await tester.pumpAndSettle();
+        await tester.longPress(find.byType(ConversationTile));
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.text(capturedContext.l10n.conversationMenuRename),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.text(capturedContext.l10n.renameConversationDialogCancel),
+        );
+        await tester.pumpAndSettle();
+
+        verifyNever(
+          () => conversationsRepository.renameConversation(
+            id: any(named: 'id'),
+            title: any(named: 'title'),
+          ),
+        );
+      },
+    );
+
+    testWidgets(
+      'rename failure surfaces a localized snackbar',
+      (tester) async {
+        when(conversationsRepository.watchConversations).thenAnswer(
+          (_) => Stream<List<Conversation>>.value([
+            buildConversation(id: 'c-1', title: 'Lunch plans'),
+          ]),
+        );
+        when(
+          () => conversationsRepository.renameConversation(
+            id: any(named: 'id'),
+            title: any(named: 'title'),
+          ),
+        ).thenThrow(StorageException('boom'));
+        seedAppState(const AppState());
+
+        late final BuildContext capturedContext;
+        await tester.pumpApp(
+          Builder(
+            builder: (context) {
+              capturedContext = context;
+              return ChatPage();
+            },
+          ),
+          appBloc: appBloc,
+          conversationsRepository: conversationsRepository,
+          chatRepositoryRegistry: chatRepositoryRegistry,
+        );
+        await tester.pump();
+
+        await tester.tap(find.byTooltip('Open navigation menu'));
+        await tester.pumpAndSettle();
+        await tester.longPress(find.byType(ConversationTile));
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.text(capturedContext.l10n.conversationMenuRename),
+        );
+        await tester.pumpAndSettle();
+        await tester.enterText(
+          find.byKey(const Key('renameConversationDialog_textField')),
+          'Updated',
+        );
+        await tester.pump();
+        await tester.tap(
+          find.text(capturedContext.l10n.renameConversationDialogSave),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text(capturedContext.l10n.conversationErrorRenameFailed),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      'delete flow: confirming dispatches $AppConversationDeleted',
+      (tester) async {
+        when(conversationsRepository.watchConversations).thenAnswer(
+          (_) => Stream<List<Conversation>>.value([
+            buildConversation(id: 'c-1', title: 'Lunch plans'),
+          ]),
+        );
+        seedAppState(const AppState());
+
+        late final BuildContext capturedContext;
+        await tester.pumpApp(
+          Builder(
+            builder: (context) {
+              capturedContext = context;
+              return ChatPage();
+            },
+          ),
+          appBloc: appBloc,
+          conversationsRepository: conversationsRepository,
+          chatRepositoryRegistry: chatRepositoryRegistry,
+        );
+        await tester.pump();
+
+        await tester.tap(find.byTooltip('Open navigation menu'));
+        await tester.pumpAndSettle();
+        await tester.longPress(find.byType(ConversationTile));
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.text(capturedContext.l10n.conversationMenuDelete),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.text(capturedContext.l10n.deleteConversationDialogConfirm),
+        );
+        await tester.pumpAndSettle();
+
+        verify(
+          () => appBloc.add(const AppConversationDeleted('c-1')),
+        ).called(1);
+      },
+    );
+
+    testWidgets(
+      'delete flow: cancelling does not dispatch $AppConversationDeleted',
+      (tester) async {
+        when(conversationsRepository.watchConversations).thenAnswer(
+          (_) => Stream<List<Conversation>>.value([
+            buildConversation(id: 'c-1', title: 'Lunch plans'),
+          ]),
+        );
+        seedAppState(const AppState());
+
+        late final BuildContext capturedContext;
+        await tester.pumpApp(
+          Builder(
+            builder: (context) {
+              capturedContext = context;
+              return ChatPage();
+            },
+          ),
+          appBloc: appBloc,
+          conversationsRepository: conversationsRepository,
+          chatRepositoryRegistry: chatRepositoryRegistry,
+        );
+        await tester.pump();
+
+        await tester.tap(find.byTooltip('Open navigation menu'));
+        await tester.pumpAndSettle();
+        await tester.longPress(find.byType(ConversationTile));
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.text(capturedContext.l10n.conversationMenuDelete),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.text(capturedContext.l10n.deleteConversationDialogCancel),
+        );
+        await tester.pumpAndSettle();
+
+        verifyNever(
+          () => appBloc.add(any(that: isA<AppConversationDeleted>())),
+        );
+      },
+    );
   });
 
   group('error message mapping', () {
@@ -486,6 +733,7 @@ void main() {
           AppTransientError.connectionFailed => l10n.chatErrorConnectionFailed,
           AppTransientError.sendFailed => l10n.chatErrorSendFailed,
           AppTransientError.messageTooLarge => l10n.chatErrorMessageTooLarge,
+          AppTransientError.deleteFailed => l10n.conversationErrorDeleteFailed,
         };
         expect(find.text(expected), findsOneWidget);
       });

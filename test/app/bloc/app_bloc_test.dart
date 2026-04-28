@@ -208,6 +208,114 @@ void main() {
       );
     });
 
+    group(AppConversationDeleted, () {
+      void stubDelete() {
+        when(
+          () => conversationsRepository.deleteConversation(any()),
+        ).thenAnswer((_) async {});
+      }
+
+      blocTest<AppBloc, AppState>(
+        'deletes the conversation and disposes the registry entry',
+        seed: () => AppState(activeConversationId: 'c-other'),
+        setUp: stubDelete,
+        build: buildBloc,
+        act: (bloc) => bloc.add(AppConversationDeleted('c-1')),
+        expect: () => <AppState>[],
+        verify: (_) {
+          verify(
+            () => conversationsRepository.deleteConversation('c-1'),
+          ).called(1);
+        },
+      );
+
+      blocTest<AppBloc, AppState>(
+        'clears the active id and last-active metadata when the deleted '
+        'conversation was active',
+        seed: () => AppState(
+          activeConversationId: 'c-1',
+          streamingMessageId: 'm-1',
+        ),
+        setUp: stubDelete,
+        build: buildBloc,
+        act: (bloc) => bloc.add(AppConversationDeleted('c-1')),
+        expect: () => [AppState()],
+        verify: (_) {
+          verify(
+            () => conversationsRepository.writeMetadata(
+              key: lastActiveConversationKey,
+            ),
+          ).called(1);
+        },
+      );
+
+      blocTest<AppBloc, AppState>(
+        'leaves the active id intact when a different conversation is deleted',
+        seed: () => AppState(activeConversationId: 'c-other'),
+        setUp: stubDelete,
+        build: buildBloc,
+        act: (bloc) => bloc.add(AppConversationDeleted('c-1')),
+        expect: () => <AppState>[],
+        verify: (_) {
+          verifyNever(
+            () => conversationsRepository.writeMetadata(
+              key: lastActiveConversationKey,
+            ),
+          );
+        },
+      );
+
+      blocTest<AppBloc, AppState>(
+        'surfaces deleteFailed when the repository throws',
+        setUp: () {
+          when(
+            () => conversationsRepository.deleteConversation(any()),
+          ).thenThrow(StorageException('boom'));
+        },
+        build: buildBloc,
+        act: (bloc) => bloc.add(AppConversationDeleted('c-1')),
+        expect: () => [
+          AppState(transientError: AppTransientError.deleteFailed),
+        ],
+        verify: (_) {
+          verifyNever(
+            () => conversationsRepository.writeMetadata(
+              key: any(named: 'key'),
+              value: any(named: 'value'),
+            ),
+          );
+        },
+      );
+
+      test('disposes the chat repository for the deleted conversation',
+          () async {
+        final repos = <_LiveChatRepository>[];
+        stubDelete();
+        final registry = buildRegistry(
+          factory: (_) {
+            final repo = _LiveChatRepository();
+            repos.add(repo);
+            return repo;
+          },
+        );
+        final bloc = AppBloc(
+          conversationsRepository: conversationsRepository,
+          chatRepositoryRegistry: registry,
+        );
+        addTearDown(bloc.close);
+
+        final initial = await registry.obtain('c-1');
+        bloc.add(AppConversationDeleted('c-1'));
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+
+        // Re-obtaining creates a fresh repository (proves the prior entry was
+        // disposed).
+        final fresh = await registry.obtain('c-1');
+        expect(identical(fresh, initial), isFalse);
+        expect(repos, hasLength(2));
+      });
+    });
+
     group(AppFirstMessageSubmitted, () {
       final newConversation = Conversation(
         id: 'c-new',
@@ -587,6 +695,18 @@ void main() {
           AppNewConversationRequested(),
           equals(AppNewConversationRequested()),
         );
+      });
+
+      test('$AppConversationDeleted supports value equality', () {
+        expect(
+          AppConversationDeleted('c'),
+          equals(AppConversationDeleted('c')),
+        );
+        expect(
+          AppConversationDeleted('a'),
+          isNot(equals(AppConversationDeleted('b'))),
+        );
+        expect(AppConversationDeleted('c').props, ['c']);
       });
 
       test('$AppFirstMessageSubmitted supports value equality', () {

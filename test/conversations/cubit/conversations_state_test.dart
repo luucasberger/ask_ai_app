@@ -16,12 +16,17 @@ void main() {
   }
 
   group(ConversationsState, () {
-    test('default state has no conversations', () {
-      expect(ConversationsState().conversations, isEmpty);
+    test('default state has no conversations and no transient error', () {
+      const state = ConversationsState();
+      expect(state.conversations, isEmpty);
+      expect(state.transientError, isNull);
     });
 
     test('copyWith carries previous values when args are omitted', () {
-      final seeded = ConversationsState(conversations: [buildConversation()]);
+      final seeded = ConversationsState(
+        conversations: [buildConversation()],
+        transientError: ConversationsTransientError.renameFailed,
+      );
       expect(seeded.copyWith(), equals(seeded));
     });
 
@@ -35,6 +40,20 @@ void main() {
       expect(next.conversations.single.id, 'b');
     });
 
+    test('copyWith sets transientError when provided', () {
+      final next = ConversationsState().copyWith(
+        transientError: ConversationsTransientError.renameFailed,
+      );
+      expect(next.transientError, ConversationsTransientError.renameFailed);
+    });
+
+    test('copyWith clears transientError when clearTransientError is true', () {
+      final seeded = ConversationsState(
+        transientError: ConversationsTransientError.renameFailed,
+      );
+      expect(seeded.copyWith(clearTransientError: true).transientError, isNull);
+    });
+
     test('supports value equality', () {
       final c = buildConversation();
       expect(
@@ -43,6 +62,12 @@ void main() {
       );
       expect(
         ConversationsState(conversations: [c]),
+        isNot(equals(ConversationsState())),
+      );
+      expect(
+        ConversationsState(
+          transientError: ConversationsTransientError.renameFailed,
+        ),
         isNot(equals(ConversationsState())),
       );
     });

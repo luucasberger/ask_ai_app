@@ -36,6 +36,8 @@ void main() {
           activeConversationId: null,
           onConversationTapped: (_) {},
           onNewChatTapped: () {},
+          onRenameRequested: (_) {},
+          onDeleteRequested: (_) {},
         ),
       );
       await tester.pump();
@@ -57,6 +59,8 @@ void main() {
       String? activeConversationId,
       ValueChanged<String>? onConversationTapped,
       VoidCallback? onNewChatTapped,
+      ValueChanged<Conversation>? onRenameRequested,
+      ValueChanged<Conversation>? onDeleteRequested,
     }) {
       return tester.pumpApp(
         BlocProvider<ConversationsCubit>.value(
@@ -65,15 +69,22 @@ void main() {
             activeConversationId: activeConversationId,
             onConversationTapped: onConversationTapped ?? (_) {},
             onNewChatTapped: onNewChatTapped ?? () {},
+            onRenameRequested: onRenameRequested ?? (_) {},
+            onDeleteRequested: onDeleteRequested ?? (_) {},
           ),
         ),
       );
     }
 
-    testWidgets('renders the localized "new chat" CTA', (tester) async {
-      when(() => cubit.state).thenReturn(ConversationsState());
-
-      late final BuildContext capturedContext;
+    Future<BuildContext> pumpViewWithCapturedContext(
+      WidgetTester tester, {
+      String? activeConversationId,
+      ValueChanged<String>? onConversationTapped,
+      VoidCallback? onNewChatTapped,
+      ValueChanged<Conversation>? onRenameRequested,
+      ValueChanged<Conversation>? onDeleteRequested,
+    }) async {
+      late BuildContext capturedContext;
       await tester.pumpApp(
         BlocProvider<ConversationsCubit>.value(
           value: cubit,
@@ -81,43 +92,34 @@ void main() {
             builder: (context) {
               capturedContext = context;
               return ConversationsDrawerView(
-                activeConversationId: null,
-                onConversationTapped: (_) {},
-                onNewChatTapped: () {},
+                activeConversationId: activeConversationId,
+                onConversationTapped: onConversationTapped ?? (_) {},
+                onNewChatTapped: onNewChatTapped ?? () {},
+                onRenameRequested: onRenameRequested ?? (_) {},
+                onDeleteRequested: onDeleteRequested ?? (_) {},
               );
             },
           ),
         ),
       );
+      return capturedContext;
+    }
 
-      expect(
-        find.text(capturedContext.l10n.drawerNewChat),
-        findsOneWidget,
-      );
+    testWidgets('renders the localized "new chat" CTA', (tester) async {
+      when(() => cubit.state).thenReturn(ConversationsState());
+
+      final context = await pumpViewWithCapturedContext(tester);
+
+      expect(find.text(context.l10n.drawerNewChat), findsOneWidget);
     });
 
     testWidgets('renders the localized section header', (tester) async {
       when(() => cubit.state).thenReturn(ConversationsState());
 
-      late final BuildContext capturedContext;
-      await tester.pumpApp(
-        BlocProvider<ConversationsCubit>.value(
-          value: cubit,
-          child: Builder(
-            builder: (context) {
-              capturedContext = context;
-              return ConversationsDrawerView(
-                activeConversationId: null,
-                onConversationTapped: (_) {},
-                onNewChatTapped: () {},
-              );
-            },
-          ),
-        ),
-      );
+      final context = await pumpViewWithCapturedContext(tester);
 
       expect(
-        find.text(capturedContext.l10n.drawerSectionConversations),
+        find.text(context.l10n.drawerSectionConversations),
         findsOneWidget,
       );
     });
@@ -127,27 +129,9 @@ void main() {
     ) async {
       when(() => cubit.state).thenReturn(ConversationsState());
 
-      late final BuildContext capturedContext;
-      await tester.pumpApp(
-        BlocProvider<ConversationsCubit>.value(
-          value: cubit,
-          child: Builder(
-            builder: (context) {
-              capturedContext = context;
-              return ConversationsDrawerView(
-                activeConversationId: null,
-                onConversationTapped: (_) {},
-                onNewChatTapped: () {},
-              );
-            },
-          ),
-        ),
-      );
+      final context = await pumpViewWithCapturedContext(tester);
 
-      expect(
-        find.text(capturedContext.l10n.drawerEmpty),
-        findsOneWidget,
-      );
+      expect(find.text(context.l10n.drawerEmpty), findsOneWidget);
       expect(find.byType(ConversationTile), findsNothing);
     });
 
@@ -226,5 +210,55 @@ void main() {
 
       expect(taps, 1);
     });
+
+    testWidgets(
+      'fires onRenameRequested when Rename is picked from the menu',
+      (tester) async {
+        final conversation = buildConversation(id: 'rename-me', title: 'Hi');
+        when(() => cubit.state).thenReturn(
+          ConversationsState(conversations: [conversation]),
+        );
+
+        Conversation? renamed;
+        final context = await pumpViewWithCapturedContext(
+          tester,
+          onRenameRequested: (c) => renamed = c,
+        );
+
+        await tester.longPress(find.byType(ConversationTile));
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.text(context.l10n.conversationMenuRename),
+        );
+        await tester.pumpAndSettle();
+
+        expect(renamed, conversation);
+      },
+    );
+
+    testWidgets(
+      'fires onDeleteRequested when Delete is picked from the menu',
+      (tester) async {
+        final conversation = buildConversation(id: 'delete-me');
+        when(() => cubit.state).thenReturn(
+          ConversationsState(conversations: [conversation]),
+        );
+
+        Conversation? deleted;
+        final context = await pumpViewWithCapturedContext(
+          tester,
+          onDeleteRequested: (c) => deleted = c,
+        );
+
+        await tester.longPress(find.byType(ConversationTile));
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.text(context.l10n.conversationMenuDelete),
+        );
+        await tester.pumpAndSettle();
+
+        expect(deleted, conversation);
+      },
+    );
   });
 }

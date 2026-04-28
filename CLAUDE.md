@@ -31,13 +31,15 @@ Interaction model across both conversations and folders: **long-press → floati
 
 ### Implementation Status
 
+Status values: **Completed**, **In Progress**, **Pending**. Update this table whenever a feature's status changes.
+
 | Feature | Status | Code / Notes |
 | --- | --- | --- |
-| Required #1 — Real-time chat | Done | `lib/chat/`, `packages/chat_client/{chat_client,web_socket_chat_client}`, `packages/chat_repository` |
-| Required #2 — Conversation history | Done | drift-backed persistence (`packages/conversations_client/{conversations_client,drift_conversations_client}`, `packages/conversations_repository`), `AppBloc` orchestration (`lib/app/`), per-conversation `ChatBloc` (`lib/chat/`), conversations drawer (`lib/conversations/`). |
-| Bonus #1 — Typewriter streaming + in-flight send button | Done | `lib/chat/widgets/{chat_composer,typewriter_text,chat_bubble}.dart`; coordinated via `ChatState.streamingMessageId` + `ChatStreamingCompleted` |
-| Bonus #2 — Rename / delete conversations | Not started | Depends on Required #2 |
-| Bonus #3 — Folders + folder CRUD + move | Not started | Depends on Required #2 |
+| Required #1 — Real-time chat | Completed | `lib/chat/`, `packages/chat_client/{chat_client,web_socket_chat_client}`, `packages/chat_repository` |
+| Required #2 — Conversation history | Completed | drift-backed persistence (`packages/conversations_client/{conversations_client,drift_conversations_client}`, `packages/conversations_repository`), `AppBloc` orchestration (`lib/app/`), per-conversation `ChatBloc` (`lib/chat/`), conversations drawer (`lib/conversations/`). |
+| Bonus #1 — Typewriter streaming + in-flight send button | Completed | `lib/chat/widgets/{chat_composer,typewriter_text,chat_bubble}.dart`; coordinated via `ChatState.streamingMessageId` + `ChatStreamingCompleted` |
+| Bonus #2 — Rename / delete conversations | Completed | Long-press `MenuAnchor` on `lib/conversations/widgets/conversation_tile.dart`; rename via `ConversationsCubit.rename` (+ `ConversationsTransientError.renameFailed`); delete via `AppConversationDeleted` on `AppBloc` (+ `AppTransientError.deleteFailed`, registry dispose, active-id clear); dialogs in `lib/conversations/widgets/{rename,delete}_conversation_dialog.dart`. **"Move to folder…"** is intentionally omitted until bonus #3 ships folders. |
+| Bonus #3 — Folders + folder CRUD + move | Pending | Depends on Required #2 (now unblocked) |
 
 ### Settled Design Choices (do not relitigate)
 

@@ -17,6 +17,9 @@ enum AppTransientError {
   /// The user attempted to send a message that exceeded the
   /// transport size limit.
   messageTooLarge,
+
+  /// Deleting a conversation failed in the storage layer.
+  deleteFailed,
 }
 
 /// {@template app_state}

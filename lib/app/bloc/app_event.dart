@@ -30,6 +30,19 @@ final class AppNewConversationRequested extends AppEvent {
   const AppNewConversationRequested();
 }
 
+/// Dispatched after the user confirms a delete from the conversation
+/// row's long-press context menu. The handler removes the conversation
+/// (drift cascades to messages), tears down its registry entry, and
+/// clears the active id when the deleted conversation was active.
+final class AppConversationDeleted extends AppEvent {
+  const AppConversationDeleted(this.conversationId);
+
+  final String conversationId;
+
+  @override
+  List<Object?> get props => [conversationId];
+}
+
 /// Dispatched by the empty-state composer when the user submits the
 /// first message in a brand-new conversation. The handler creates
 /// the [Conversation] row, persists the user message, activates the

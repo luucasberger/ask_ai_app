@@ -77,5 +77,76 @@ void main() {
       await cubit.close();
       expect(controller.hasListener, isFalse);
     });
+
+    group('rename', () {
+      blocTest<ConversationsCubit, ConversationsState>(
+        'forwards a trimmed title to the repository',
+        setUp: () {
+          when(
+            () => conversationsRepository.renameConversation(
+              id: any(named: 'id'),
+              title: any(named: 'title'),
+            ),
+          ).thenAnswer((_) async {});
+        },
+        build: buildCubit,
+        act: (cubit) => cubit.rename(id: 'c-1', title: '  New title  '),
+        expect: () => <ConversationsState>[],
+        verify: (_) {
+          verify(
+            () => conversationsRepository.renameConversation(
+              id: 'c-1',
+              title: 'New title',
+            ),
+          ).called(1);
+        },
+      );
+
+      blocTest<ConversationsCubit, ConversationsState>(
+        'is a no-op when title is blank',
+        build: buildCubit,
+        act: (cubit) => cubit.rename(id: 'c-1', title: '   '),
+        expect: () => <ConversationsState>[],
+        verify: (_) {
+          verifyNever(
+            () => conversationsRepository.renameConversation(
+              id: any(named: 'id'),
+              title: any(named: 'title'),
+            ),
+          );
+        },
+      );
+
+      blocTest<ConversationsCubit, ConversationsState>(
+        'surfaces renameFailed when the repository throws',
+        setUp: () {
+          when(
+            () => conversationsRepository.renameConversation(
+              id: any(named: 'id'),
+              title: any(named: 'title'),
+            ),
+          ).thenThrow(StorageException('boom'));
+        },
+        build: buildCubit,
+        act: (cubit) => cubit.rename(id: 'c-1', title: 'New title'),
+        expect: () => [
+          ConversationsState(
+            transientError: ConversationsTransientError.renameFailed,
+          ),
+        ],
+      );
+    });
+
+    group('clearTransientError', () {
+      blocTest<ConversationsCubit, ConversationsState>(
+        'clears the transient error',
+        seed: () => ConversationsState(
+          transientError: ConversationsTransientError.renameFailed,
+        ),
+        build: buildCubit,
+        act: (cubit) => cubit.clearTransientError(),
+        expect: () => [ConversationsState()],
+      );
+    });
   });
 }

@@ -35,20 +35,43 @@ class ChatView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<AppBloc, AppState>(
-      listenWhen: (oldState, newState) =>
-          newState.transientError != null &&
-          newState.transientError != oldState.transientError,
-      listener: (context, state) {
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            SnackBar(
-              content: Text(_appErrorMessage(context, state.transientError!)),
-            ),
-          );
-        context.read<AppBloc>().add(const AppTransientErrorCleared());
-      },
+    return MultiBlocListener(
+      listeners: [
+        BlocListener<AppBloc, AppState>(
+          listenWhen: (oldState, newState) =>
+              newState.transientError != null &&
+              newState.transientError != oldState.transientError,
+          listener: (context, state) {
+            ScaffoldMessenger.of(context)
+              ..hideCurrentSnackBar()
+              ..showSnackBar(
+                SnackBar(
+                  content: Text(
+                    _appErrorMessage(context, state.transientError!),
+                  ),
+                ),
+              );
+            context.read<AppBloc>().add(const AppTransientErrorCleared());
+          },
+        ),
+        BlocListener<ConversationsCubit, ConversationsState>(
+          listenWhen: (oldState, newState) =>
+              newState.transientError != null &&
+              newState.transientError != oldState.transientError,
+          listener: (context, state) {
+            ScaffoldMessenger.of(context)
+              ..hideCurrentSnackBar()
+              ..showSnackBar(
+                SnackBar(
+                  content: Text(
+                    _conversationsErrorMessage(context, state.transientError!),
+                  ),
+                ),
+              );
+            context.read<ConversationsCubit>().clearTransientError();
+          },
+        ),
+      ],
       child: BlocBuilder<AppBloc, AppState>(
         buildWhen: (oldState, newState) =>
             oldState.activeConversationId != newState.activeConversationId,
@@ -71,6 +94,10 @@ class ChatView extends StatelessWidget {
                       .read<AppBloc>()
                       .add(const AppNewConversationRequested());
                 },
+                onRenameRequested: (conversation) =>
+                    _onRenameRequested(context, conversation),
+                onDeleteRequested: (conversation) =>
+                    _onDeleteRequested(context, conversation),
               ),
             ),
             body: SafeArea(
@@ -86,6 +113,26 @@ class ChatView extends StatelessWidget {
         },
       ),
     );
+  }
+
+  Future<void> _onRenameRequested(
+    BuildContext context,
+    Conversation conversation,
+  ) async {
+    final cubit = context.read<ConversationsCubit>();
+    final newTitle = await RenameConversationDialog.show(context, conversation);
+    if (newTitle == null) return;
+    await cubit.rename(id: conversation.id, title: newTitle);
+  }
+
+  Future<void> _onDeleteRequested(
+    BuildContext context,
+    Conversation conversation,
+  ) async {
+    final appBloc = context.read<AppBloc>();
+    final confirmed = await DeleteConversationDialog.show(context);
+    if (!confirmed) return;
+    appBloc.add(AppConversationDeleted(conversation.id));
   }
 }
 
@@ -295,5 +342,17 @@ String _appErrorMessage(BuildContext context, AppTransientError error) {
     AppTransientError.connectionFailed => l10n.chatErrorConnectionFailed,
     AppTransientError.sendFailed => l10n.chatErrorSendFailed,
     AppTransientError.messageTooLarge => l10n.chatErrorMessageTooLarge,
+    AppTransientError.deleteFailed => l10n.conversationErrorDeleteFailed,
+  };
+}
+
+String _conversationsErrorMessage(
+  BuildContext context,
+  ConversationsTransientError error,
+) {
+  final l10n = context.l10n;
+  return switch (error) {
+    ConversationsTransientError.renameFailed =>
+      l10n.conversationErrorRenameFailed,
   };
 }

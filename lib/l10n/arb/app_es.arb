@@ -51,5 +51,53 @@
     "drawerSectionConversations": "Conversaciones",
     "@drawerSectionConversations": {
         "description": "Encabezado de sección sobre la lista de conversaciones dentro del cajón"
+    },
+    "conversationMenuRename": "Renombrar",
+    "@conversationMenuRename": {
+        "description": "Etiqueta de la acción Renombrar en el menú contextual de pulsación larga de la conversación"
+    },
+    "conversationMenuDelete": "Eliminar",
+    "@conversationMenuDelete": {
+        "description": "Etiqueta de la acción Eliminar en el menú contextual de pulsación larga de la conversación"
+    },
+    "renameConversationDialogTitle": "Renombrar conversación",
+    "@renameConversationDialogTitle": {
+        "description": "Título del diálogo mostrado cuando el usuario elige Renombrar en el menú contextual"
+    },
+    "renameConversationDialogHint": "Nombre de la conversación",
+    "@renameConversationDialogHint": {
+        "description": "Texto de marcador del campo de texto del diálogo de renombrar"
+    },
+    "renameConversationDialogCancel": "Cancelar",
+    "@renameConversationDialogCancel": {
+        "description": "Acción Cancelar en el diálogo de renombrar conversación"
+    },
+    "renameConversationDialogSave": "Guardar",
+    "@renameConversationDialogSave": {
+        "description": "Acción Guardar en el diálogo de renombrar conversación"
+    },
+    "deleteConversationDialogTitle": "¿Eliminar conversación?",
+    "@deleteConversationDialogTitle": {
+        "description": "Título del diálogo mostrado cuando el usuario elige Eliminar en el menú contextual"
+    },
+    "deleteConversationDialogBody": "Esta conversación se eliminará de forma permanente.",
+    "@deleteConversationDialogBody": {
+        "description": "Texto del cuerpo del diálogo de confirmación de eliminar conversación"
+    },
+    "deleteConversationDialogCancel": "Cancelar",
+    "@deleteConversationDialogCancel": {
+        "description": "Acción Cancelar en el diálogo de confirmación de eliminar conversación"
+    },
+    "deleteConversationDialogConfirm": "Eliminar",
+    "@deleteConversationDialogConfirm": {
+        "description": "Acción de confirmación en el diálogo de eliminar conversación"
+    },
+    "conversationErrorRenameFailed": "No se pudo renombrar la conversación. Inténtalo de nuevo.",
+    "@conversationErrorRenameFailed": {
+        "description": "Snackbar mostrado cuando falla renombrar una conversación"
+    },
+    "conversationErrorDeleteFailed": "No se pudo eliminar la conversación. Inténtalo de nuevo.",
+    "@conversationErrorDeleteFailed": {
+        "description": "Snackbar mostrado cuando falla eliminar una conversación"
     }
 }
