@@ -6,8 +6,6 @@
 
 A minimal Flutter chat app that simulates a conversation with an AI assistant. Messages are sent over a WebSocket and the server's echoed response is rendered as the assistant reply, complete with a typewriter reveal.
 
-Built as a take-home for the Zapia Senior Flutter Developer Challenge.
-
 ## Demo
 
 A short screen recording of the finished app lives at [`demo.mov`](./demo.mov) in the repo root.
