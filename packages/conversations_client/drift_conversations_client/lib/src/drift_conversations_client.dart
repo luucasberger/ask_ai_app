@@ -92,12 +92,7 @@ class DriftConversationsClient implements ConversationsClient {
     try {
       final query = _db.update(_db.conversations)
         ..where((t) => t.id.equals(id));
-      await query.write(
-        ConversationsCompanion(
-          title: Value(title),
-          updatedAt: Value(_now()),
-        ),
-      );
+      await query.write(ConversationsCompanion(title: Value(title)));
     } catch (error, stackTrace) {
       Error.throwWithStackTrace(StorageException(error), stackTrace);
     }

@@ -36,6 +36,10 @@ abstract class ConversationsClient {
 
   /// Updates the [Conversation.title] of the conversation identified
   /// by [id].
+  ///
+  /// Does **not** bump [Conversation.updatedAt] — only [appendMessage]
+  /// touches it, so the conversation list ordering reflects message
+  /// activity rather than metadata edits.
   Future<void> renameConversation({
     required String id,
     required String title,

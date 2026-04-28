@@ -97,16 +97,35 @@ void main() {
     });
 
     group('renameConversation', () {
-      test('updates the title and bumps updatedAt', () async {
+      test('updates the title without bumping updatedAt', () async {
         final created = await client.createConversation(title: 'Old');
+        final originalUpdatedAt = created.updatedAt;
         now = now.add(const Duration(hours: 1));
 
         await client.renameConversation(id: created.id, title: 'New');
 
         final conversations = await client.watchConversations().first;
         expect(conversations.single.title, equals('New'));
-        expect(conversations.single.updatedAt, equals(now));
+        expect(conversations.single.updatedAt, equals(originalUpdatedAt));
       });
+
+      test(
+        'does not reorder the conversation list above more recent ones',
+        () async {
+          final older = await client.createConversation(title: 'Older');
+          now = now.add(const Duration(hours: 1));
+          final newer = await client.createConversation(title: 'Newer');
+          now = now.add(const Duration(hours: 1));
+
+          await client.renameConversation(id: older.id, title: 'Renamed');
+
+          final conversations = await client.watchConversations().first;
+          expect(
+            conversations.map((c) => c.id).toList(),
+            orderedEquals([newer.id, older.id]),
+          );
+        },
+      );
 
       test('throws $StorageException on storage failure', () async {
         final failing = _buildFailingClient();
