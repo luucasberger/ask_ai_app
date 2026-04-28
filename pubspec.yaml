@@ -29,7 +29,7 @@ dependencies:
   intl: ^0.20.2
   path: ^1.9.1
   path_provider: ^2.1.5
-  sqlite3_flutter_libs: ^0.5.27
+  sqlite3_flutter_libs: ^0.6.0+eol
   web_socket_chat_client:
     path: packages/chat_client/web_socket_chat_client
 
